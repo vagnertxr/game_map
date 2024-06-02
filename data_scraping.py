@@ -3,6 +3,8 @@ import psycopg2
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import re
+import geopandas as gpd
+from sqlalchemy import create_engine
 
 url = "https://caioicy.github.io/slsa/leaderboards/"
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"}
@@ -244,9 +246,117 @@ ON player_code = slippiconnectcodes
 cursor.execute("DROP TABLE IF EXISTS dados_pais")
 cursor.execute('''
 CREATE TABLE dados_pais AS
-SELECT countrycode, AVG(rating_number), COUNT(countrycode) FROM paises_players
+SELECT countrycode, AVG(rating_number) as avg_rating , COUNT(countrycode) as players FROM paises_players
 GROUP BY countrycode
-ORDER BY COUNT DESC
+ORDER BY players DESC
                ''')
+cursor.execute('''
+UPDATE dados_pais
+SET countrycode = 'USA'
+WHERE countrycode = 'us';
+UPDATE dados_pais
+SET countrycode = 'CHL'
+WHERE countrycode = 'cl';
+UPDATE dados_pais
+SET countrycode = 'VEN'
+WHERE countrycode = 've';
+UPDATE dados_pais
+SET countrycode = 'URY'
+WHERE countrycode = 'uy';
+UPDATE dados_pais
+SET countrycode = 'PER'
+WHERE countrycode = 'pe';
+UPDATE dados_pais
+SET countrycode = 'COL'
+WHERE countrycode = 'co';
+UPDATE dados_pais
+SET countrycode = 'ECU'
+WHERE countrycode = 'ec';
+UPDATE dados_pais
+SET countrycode = 'BRA'
+WHERE countrycode = 'br';
+UPDATE dados_pais
+SET countrycode = 'BOL'
+WHERE countrycode = 'bo';
+UPDATE dados_pais
+SET countrycode = 'ARG'
+WHERE countrycode = 'ar';
+UPDATE dados_pais
+SET countrycode = NULL
+WHERE countrycode = 'null';
+               ''')
+query_dados = "SELECT * from dados_pais"
+
+dados_paises = pd.read_sql_query(query_dados, conexao)
+
+conexao.commit()
+conexao.close()
+
+from matplotlib import pyplot as plt
+from matplotlib import patheffects
+
+conexao = psycopg2.connect(database="melee",
+                           host="localhost",
+                           user="postgres",
+                           password="postgres",
+                           port="5432")
+
+cursor = conexao.cursor()
+
+query_dados = "SELECT * from dados_pais"
+
+dados_paises = pd.read_sql_query(query_dados, conexao)
+
+world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+
+merged_df = pd.merge(dados_paises, world, left_on='countrycode', right_on='iso_a3', how='left')
+
+geomapa = gpd.GeoDataFrame(merged_df, geometry='geometry')
+
+cmap = 'Reds'
+x_min, x_max = -90, -30  
+y_min, y_max = -60, 10  
+geomapa_americadosul = geomapa.cx[x_min:x_max, y_min:y_max]
+fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+geomapa_americadosul.plot(column='players', cmap=cmap, legend=False, ax=ax)
+
+for index, row in geomapa_americadosul.iterrows():
+    text = row['players']
+    x, y = row['geometry'].centroid.coords[0]
+    text_effect = [patheffects.withStroke(linewidth=5, foreground='black')]
+    ax.annotate(text=text, xy=(x, y), fontsize=12, ha='center', color='white', path_effects=text_effect)
+
+ax.set_axis_off()
+ax.set_title('Jogadores por país')
+ax.text(1, -0.01, 'Fonte: Slippi Leaderboard SA (https://caioicy.github.io/slsa/leaderboards/)',
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax.transAxes,
+        color='black', fontsize=6)
+plt.show()
+fig.savefig('mapa_jogadores.png')
+
+geomapa_americaavg = geomapa.cx[x_min:x_max, y_min:y_max]
+fig2, ax = plt.subplots(1, 1, figsize=(10, 6))
+geomapa_americaavg.plot(column='avg_rating', cmap=cmap, legend=False, ax=ax)
+
+for index, row in geomapa_americaavg.iterrows():
+    avg_rating = round(row['avg_rating'])  # Arredonda o valor da média de rating
+    text = f"{avg_rating}"
+    x, y = row['geometry'].centroid.coords[0]
+    text_effect = [patheffects.withStroke(linewidth=5, foreground='black')]
+    ax.annotate(text=text, xy=(x, y), fontsize=12, ha='center', color='white', path_effects=text_effect)
+
+ax.set_title('Média de rating por país')
+
+ax.set_axis_off()
+ax.text(1, -0.01, 'Fonte: Slippi Leaderboard SA (https://caioicy.github.io/slsa/leaderboards/)',
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax.transAxes,
+        color='black', fontsize=6)
+plt.show()
+
+fig2.savefig('mapa_avg_rating.png')
+
+
 conexao.commit()
 conexao.close()
