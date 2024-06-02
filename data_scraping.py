@@ -313,7 +313,9 @@ merged_df = pd.merge(dados_paises, world, left_on='countrycode', right_on='iso_a
 
 geomapa = gpd.GeoDataFrame(merged_df, geometry='geometry')
 
-cmap = 'Reds'
+cmap = 'Greens'
+cmap2 = 'Reds_r'
+
 x_min, x_max = -90, -30  
 y_min, y_max = -60, 10  
 geomapa_americadosul = geomapa.cx[x_min:x_max, y_min:y_max]
@@ -337,7 +339,7 @@ fig.savefig('mapa_jogadores.png')
 
 geomapa_americaavg = geomapa.cx[x_min:x_max, y_min:y_max]
 fig2, ax = plt.subplots(1, 1, figsize=(10, 6))
-geomapa_americaavg.plot(column='avg_rating', cmap=cmap, legend=False, ax=ax)
+geomapa_americaavg.plot(column='avg_rating', cmap=cmap2, legend=False, ax=ax)
 
 for index, row in geomapa_americaavg.iterrows():
     avg_rating = round(row['avg_rating'])  # Arredonda o valor da média de rating
@@ -347,7 +349,6 @@ for index, row in geomapa_americaavg.iterrows():
     ax.annotate(text=text, xy=(x, y), fontsize=12, ha='center', color='white', path_effects=text_effect)
 
 ax.set_title('Média de rating por país')
-
 ax.set_axis_off()
 ax.text(1, -0.01, 'Fonte: Slippi Leaderboard SA (https://caioicy.github.io/slsa/leaderboards/)',
         verticalalignment='bottom', horizontalalignment='right',
