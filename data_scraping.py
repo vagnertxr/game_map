@@ -342,7 +342,7 @@ fig2, ax = plt.subplots(1, 1, figsize=(10, 6))
 geomapa_americaavg.plot(column='avg_rating', cmap=cmap2, legend=False, ax=ax)
 
 for index, row in geomapa_americaavg.iterrows():
-    avg_rating = round(row['avg_rating'])  # Arredonda o valor da média de rating
+    avg_rating = round(row['avg_rating'])
     text = f"{avg_rating}"
     x, y = row['geometry'].centroid.coords[0]
     text_effect = [patheffects.withStroke(linewidth=5, foreground='black')]
