@@ -51,6 +51,7 @@ cl,
 br,VLOR#403
 br,LAJ#525
 br,GUTO#927
+br,
 br,EVA#485
 br,NOT#393
 br,IZZI#399
@@ -142,7 +143,6 @@ br,WRNK#877
 br,BMC#363
 uy,FBRO#960
 cl,CHPA#675
-null,RADO#902
 uy,ZEKA#232
 br,CANT#698
 cl,DUAL#322
@@ -157,7 +157,6 @@ br,WK#243
 br,BARR#737
 cl,NTQ#10
 cl,HELL#898
-null,XND#426
 pe,HELL#735
 ar,DALA#476
 cl,RASH#781

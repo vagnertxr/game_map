@@ -79,7 +79,7 @@ html_string_treated = html_string_sem_colchetes.replace(']', '!')
 
 country_codes = re.findall(r'countryCode\\\\":(.*?),', html_string_treated)
 slippi_connect_codes = re.findall(r'slippiConnectCodes\\\\":!(.*?),', html_string_treated)
-del country_codes[51] # foi identificado 1 jogador que possui país associado, mas não possui código. aqui, eu apago
+# del country_codes[51] # foi identificado 1 jogador que possui país associado, mas não possui código. aqui, eu apago
 country_codes = [code.replace('\\', '') for code in country_codes]
 country_codes = [code.replace('"', '') for code in country_codes]
 country_codes = [code.replace('}', '') for code in country_codes]
@@ -96,6 +96,8 @@ slippi_connect_codes = [code.replace('"', '') for code in slippi_connect_codes]
 
 countrysize = len(country_codes)
 codesize = len(slippi_connect_codes)
+print(countrysize)
+print(codesize)
 
 csvcodes = pd.DataFrame({'codes': slippi_connect_codes})
 csvpaises = pd.DataFrame({'paises': country_codes})
@@ -174,18 +176,6 @@ html_string = str(html)
 html_string_sem_colchetes = html_string.replace('[', '!')
 html_string_treated = html_string_sem_colchetes.replace(']', '!')
 
-country_codes = re.findall(r'countryCode\\\\":(.*?),', html_string_treated)
-slippi_connect_codes = re.findall(r'slippiConnectCodes\\\\":!(.*?),', html_string_treated)
-del country_codes[51] # foi identificado 1 jogador que possui país associado, mas não possui código. aqui, eu apago
-country_codes = [code.replace('\\', '') for code in country_codes]
-country_codes = [code.replace('"', '') for code in country_codes]
-country_codes = [code.replace('}', '') for code in country_codes]
-slippi_connect_codes = [code.replace('\\', '') for code in slippi_connect_codes]
-slippi_connect_codes = [code.replace('!', '') for code in slippi_connect_codes]
-slippi_connect_codes = [code.replace('}', '') for code in slippi_connect_codes]
-slippi_connect_codes = [code.replace('"', '') for code in slippi_connect_codes]
-
-
 # codigo para encontrar o texto que varia = (.*?)
 # como estão os dados lá no html:
 # \\\\"tr\\\\":{\\\\"slug\\\\":\\\\"tr\\\\",\\\\"tag\\\\":\\\\"TXR\\\\",
@@ -193,8 +183,8 @@ slippi_connect_codes = [code.replace('"', '') for code in slippi_connect_codes]
 
 countrysize = len(country_codes)
 codesize = len(slippi_connect_codes)
-
-
+print(countrysize)
+print(codesize)
 df = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
 df.to_csv('paises_codes.csv', index=False)
 
@@ -335,7 +325,7 @@ ax.text(1, -0.01, 'Fonte: Slippi Leaderboard SA (https://caioicy.github.io/slsa/
         transform=ax.transAxes,
         color='black', fontsize=6)
 plt.show()
-fig.savefig('mapa_jogadores.png')
+fig.savefig('docs/mapa_jogadores.png')
 
 geomapa_americaavg = geomapa.cx[x_min:x_max, y_min:y_max]
 fig2, ax = plt.subplots(1, 1, figsize=(10, 6))
@@ -356,7 +346,7 @@ ax.text(1, -0.01, 'Fonte: Slippi Leaderboard SA (https://caioicy.github.io/slsa/
         color='black', fontsize=6)
 plt.show()
 
-fig2.savefig('mapa_avg_rating.png')
+fig2.savefig('docs/mapa_avg_rating.png')
 
 
 conexao.commit()
