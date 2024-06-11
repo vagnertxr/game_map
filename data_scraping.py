@@ -79,7 +79,7 @@ html_string_treated = html_string_sem_colchetes.replace(']', '!')
 
 country_codes = re.findall(r'countryCode\\\\":(.*?),', html_string_treated)
 slippi_connect_codes = re.findall(r'slippiConnectCodes\\\\":!(.*?),', html_string_treated)
-# del country_codes[51] # foi identificado 1 jogador que possui país associado, mas não possui código. aqui, eu apago
+del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país
 country_codes = [code.replace('\\', '') for code in country_codes]
 country_codes = [code.replace('"', '') for code in country_codes]
 country_codes = [code.replace('}', '') for code in country_codes]
@@ -103,7 +103,6 @@ csvcodes = pd.DataFrame({'codes': slippi_connect_codes})
 csvpaises = pd.DataFrame({'paises': country_codes})
 csvcodes.to_csv('codigos_brutos.csv', index=False)
 csvpaises.to_csv('paises_brutos.csv', index=False)
-
 
 df = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
 
