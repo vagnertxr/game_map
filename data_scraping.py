@@ -96,7 +96,9 @@ slippi_connect_codes = [code.replace('"', '') for code in slippi_connect_codes]
 
 countrysize = len(country_codes)
 codesize = len(slippi_connect_codes)
+print("Países Encontrados:")
 print(countrysize)
+print("Códigos Encontrados:")
 print(codesize)
 
 csvcodes = pd.DataFrame({'codes': slippi_connect_codes})
@@ -180,10 +182,6 @@ html_string_treated = html_string_sem_colchetes.replace(']', '!')
 # \\\\"tr\\\\":{\\\\"slug\\\\":\\\\"tr\\\\",\\\\"tag\\\\":\\\\"TXR\\\\",
 # \\\\"countryCode\\\\":\\\\"br\\\\",\\\\"slippiConnectCodes\\\\":c\\\\"TXR#205\\\\"u,\\\\"subregion\\\\":\\\\"br\\\\"}
 
-countrysize = len(country_codes)
-codesize = len(slippi_connect_codes)
-print(countrysize)
-print(codesize)
 df = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
 df.to_csv('paises_codes.csv', index=False)
 
