@@ -148,13 +148,6 @@
                         <th scope="row">Player count</th>\
                         <td>' + (feature.properties['Player count'] !== null ? autolinker.link(feature.properties['Player count'].toLocaleString()) : '') + '</td>\
                     </tr>\
-                    <tr>\
-                        <th scope="row">ISO_2</th>\
-                        <td class="visible-with-data" id="ISO_2">' + (feature.properties['ISO_2'] !== null ? autolinker.link(feature.properties['ISO_2'].toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['COUNTRYAFF'] !== null ? autolinker.link(feature.properties['COUNTRYAFF'].toLocaleString()) : '') + '</td>\
-                    </tr>\
                 </table>';
             var content = removeEmptyRowsFromPopupContent(popupContent, feature);
 			layer.on('popupopen', function(e) {
@@ -294,9 +287,6 @@
                     <tr>\
                         <th scope="row">Player count</th>\
                         <td class="visible-with-data" id="Player count">' + (feature.properties['Player count'] !== null ? autolinker.link(feature.properties['Player count'].toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2"><strong>COUNTRY</strong><br />' + (feature.properties['COUNTRY'] !== null ? autolinker.link(feature.properties['COUNTRY'].toLocaleString()) : '') + '</td>\
                     </tr>\
                 </table>';
             var content = removeEmptyRowsFromPopupContent(popupContent, feature);
