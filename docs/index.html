@@ -75,7 +75,7 @@
 				popup._contentNode.classList.remove('media');
 			}
 		}
-        var title = new L.Control({'position':'topright'});
+        var title = new L.Control({'position':'topleft'});
         title.onAdd = function (map) {
             this._div = L.DomUtil.create('div', 'info');
             this.update();
@@ -97,7 +97,7 @@
             abstract.show = function () {
                 this._div.classList.remove("abstract");
                 this._div.classList.add("abstractUncollapsed");
-                this._div.innerHTML = 'Data extracted from <url>https://caioicy.github.io/slsa/leaderboards/</url>';
+                this._div.innerHTML = 'As of July 15th, 2024<br />Data extracted from https://caioicy.github.io/slsa/<br />';
         };
         abstract.addTo(map);
         var zoomControl = L.control.zoom({
