@@ -85,7 +85,7 @@
             this._div.innerHTML = '<h2>Slippi Ranked South America Map</h2>';
         };
         title.addTo(map);
-        var abstract = new L.Control({'position':'bottomright'});
+        var abstract = new L.Control({'position':'topleft'});
         abstract.onAdd = function (map) {
             this._div = L.DomUtil.create('div',
             'leaflet-control abstract');
