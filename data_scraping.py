@@ -15,6 +15,7 @@ soup = BeautifulSoup(html, 'html.parser')
 
 tabela = soup.find('table')
 df = pd.read_html(str(tabela), flavor='html5lib')[0]
+df['RANK'] = df['RANK'].astype(str)
 
 df['RANK'] = df['RANK'].str.replace('NEW!', '')
 df['RANK'] = df['RANK'].str.extract(r'(\d+)')
@@ -79,7 +80,7 @@ html_string_treated = html_string_sem_colchetes.replace(']', '!')
 
 country_codes = re.findall(r'countryCode\\\\":(.*?),', html_string_treated)
 slippi_connect_codes = re.findall(r'slippiConnectCodes\\\\":!(.*?),', html_string_treated)
-del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país
+# del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país
 country_codes = [code.replace('\\', '') for code in country_codes]
 country_codes = [code.replace('"', '') for code in country_codes]
 country_codes = [code.replace('}', '') for code in country_codes]
@@ -233,9 +234,25 @@ ON player_code = slippiconnectcodes
 cursor.execute("DROP TABLE IF EXISTS dados_pais")
 cursor.execute('''
 CREATE TABLE dados_pais AS
-SELECT countrycode, AVG(rating_number) as avg_rating , COUNT(countrycode) as players FROM paises_players
-GROUP BY countrycode
-ORDER BY players DESC
+SELECT 
+    pp1.countrycode, 
+    AVG(pp1.rating_number) AS average_rating, 
+    COUNT(pp1.countrycode) AS player_count,
+    (
+        SELECT pp2.rating_elo 
+        FROM paises_players AS pp2
+        WHERE pp2.countrycode = pp1.countrycode
+        GROUP BY pp2.rating_elo
+        ORDER BY COUNT(*) DESC
+        LIMIT 1
+    ) AS most_common_rank
+FROM 
+    paises_players AS pp1
+GROUP BY 
+    pp1.countrycode
+ORDER BY 
+    player_count DESC;
+
                ''')
 cursor.execute('''
 UPDATE dados_pais
@@ -269,6 +286,9 @@ UPDATE dados_pais
 SET countrycode = 'ARG'
 WHERE countrycode = 'ar';
 UPDATE dados_pais
+SET countrycode = 'GTM'
+WHERE countrycode = 'gt';               
+UPDATE dados_pais
 SET countrycode = NULL
 WHERE countrycode = 'null';
                ''')
@@ -300,6 +320,17 @@ merged_df = pd.merge(dados_paises, world, left_on='countrycode', right_on='iso_a
 
 geomapa = gpd.GeoDataFrame(merged_df, geometry='geometry')
 
+geomapa.to_file("docs/average_rating.gpkg")
+geomapa.to_file("docs/player_count.gpkg")
+
+if geomapa.crs is None:
+    geomapa.set_crs("EPSG:4326", inplace=True)
+
+geocentroid = geomapa.copy()
+geocentroid['geometry'] = geomapa['geometry'].centroid
+
+geocentroid.to_file("docs/centroid.gpkg")
+
 cmap = 'Greens'
 cmap2 = 'Reds_r'
 
@@ -307,10 +338,10 @@ x_min, x_max = -90, -30
 y_min, y_max = -60, 10  
 geomapa_americadosul = geomapa.cx[x_min:x_max, y_min:y_max]
 fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-geomapa_americadosul.plot(column='players', cmap=cmap, legend=False, ax=ax)
+geomapa_americadosul.plot(column='player_count', cmap=cmap, legend=False, ax=ax)
 
 for index, row in geomapa_americadosul.iterrows():
-    text = row['players']
+    text = row['player_count']
     x, y = row['geometry'].centroid.coords[0]
     text_effect = [patheffects.withStroke(linewidth=5, foreground='black')]
     ax.annotate(text=text, xy=(x, y), fontsize=12, ha='center', color='white', path_effects=text_effect)
@@ -326,10 +357,10 @@ fig.savefig('docs/mapa_jogadores.png')
 
 geomapa_americaavg = geomapa.cx[x_min:x_max, y_min:y_max]
 fig2, ax = plt.subplots(1, 1, figsize=(10, 6))
-geomapa_americaavg.plot(column='avg_rating', cmap=cmap2, legend=False, ax=ax)
+geomapa_americaavg.plot(column='average_rating', cmap=cmap2, legend=False, ax=ax)
 
 for index, row in geomapa_americaavg.iterrows():
-    avg_rating = round(row['avg_rating'])
+    avg_rating = round(row['average_rating'])
     text = f"{avg_rating}"
     x, y = row['geometry'].centroid.coords[0]
     text_effect = [patheffects.withStroke(linewidth=5, foreground='black')]
