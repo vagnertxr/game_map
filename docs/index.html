@@ -149,6 +149,10 @@
                     <tr>\
                         <td colspan="2">' + (feature.properties['Country name'] !== null ? autolinker.link(feature.properties['Country name'].toLocaleString()) : '') + '</td>\
                     </tr>\
+                    <tr>\
+                        <th scope="row">iso_a3</th>\
+                        <td class="visible-with-data" id="iso_a3">' + (feature.properties['iso_a3'] !== null ? autolinker.link(feature.properties['iso_a3'].toLocaleString()) : '') + '</td>\
+                    </tr>\
                 </table>';
             var content = removeEmptyRowsFromPopupContent(popupContent, feature);
 			layer.on('popupopen', function(e) {
