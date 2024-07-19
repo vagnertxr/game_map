@@ -242,6 +242,7 @@ SELECT
         SELECT pp2.rating_elo 
         FROM paises_players AS pp2
         WHERE pp2.countrycode = pp1.countrycode
+        AND pp2.rating_elo != 'PENDING'
         GROUP BY pp2.rating_elo
         ORDER BY COUNT(*) DESC
         LIMIT 1
