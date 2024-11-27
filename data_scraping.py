@@ -202,7 +202,7 @@ if table_exists:
         cursor.execute('''
         CREATE TABLE melee_paises (
             ID SERIAL PRIMARY KEY,
-            COUNTRYCODE VARCHAR(255),
+            COUNTRYCODE VARCHAR(2),
             SLIPPICONNECTCODES VARCHAR(255)
         )
     ''')
@@ -215,7 +215,7 @@ else:
     cursor.execute('''
         CREATE TABLE melee_paises (
             ID SERIAL PRIMARY KEY,
-            COUNTRYCODE VARCHAR(255),
+            COUNTRYCODE VARCHAR(2),
             SLIPPICONNECTCODES VARCHAR(255)
         );
     ''')
@@ -255,45 +255,60 @@ ORDER BY
     player_count DESC;
 
                ''')
+
 cursor.execute('''
 UPDATE dados_pais
-SET countrycode = 'USA'
+SET countrycode = 'US'
 WHERE countrycode = 'us';
 UPDATE dados_pais
-SET countrycode = 'CHL'
+SET countrycode = 'CL'
 WHERE countrycode = 'cl';
 UPDATE dados_pais
-SET countrycode = 'VEN'
+SET countrycode = 'VE'
 WHERE countrycode = 've';
 UPDATE dados_pais
-SET countrycode = 'URY'
+SET countrycode = 'UY'
 WHERE countrycode = 'uy';
 UPDATE dados_pais
-SET countrycode = 'PER'
+SET countrycode = 'PE'
 WHERE countrycode = 'pe';
 UPDATE dados_pais
-SET countrycode = 'COL'
+SET countrycode = 'CO'
 WHERE countrycode = 'co';
 UPDATE dados_pais
-SET countrycode = 'ECU'
+SET countrycode = 'EC'
 WHERE countrycode = 'ec';
 UPDATE dados_pais
-SET countrycode = 'BRA'
+SET countrycode = 'BR'
 WHERE countrycode = 'br';
 UPDATE dados_pais
-SET countrycode = 'BOL'
+SET countrycode = 'BO'
 WHERE countrycode = 'bo';
 UPDATE dados_pais
-SET countrycode = 'ARG'
+SET countrycode = 'AR'
 WHERE countrycode = 'ar';
 UPDATE dados_pais
-SET countrycode = 'GTM'
+SET countrycode = 'GT'
 WHERE countrycode = 'gt';               
 UPDATE dados_pais
 SET countrycode = NULL
 WHERE countrycode = 'null';
                ''')
 query_dados = "SELECT * from dados_pais"
+
+cursor.execute(''' DROP TABLE IF EXISTS public.output''')
+cursor.execute('''
+CREATE TABLE output AS 
+SELECT 
+    b.country,
+	a.average_rating,
+	a.player_count,
+	a.most_common_rank,
+    b.geom,
+FROM public.dados_pais AS a
+JOIN public.countries AS b
+ON a.countrycode = b.iso;
+''')
 
 dados_paises = pd.read_sql_query(query_dados, conexao)
 
@@ -317,7 +332,7 @@ dados_paises = pd.read_sql_query(query_dados, conexao)
 
 world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
-merged_df = pd.merge(dados_paises, world, left_on='countrycode', right_on='iso_a3', how='left')
+merged_df = pd.merge(dados_paises, world, left_on='countrycode', right_on='iso_a2', how='left')
 
 geomapa = gpd.GeoDataFrame(merged_df, geometry='geometry')
 
