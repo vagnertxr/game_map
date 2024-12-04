@@ -1,11 +1,11 @@
+# importando todas as bibliotecas necessárias
 import pandas as pd
 import psycopg2
+import re
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
-import re
-import geopandas as gpd
-from sqlalchemy import create_engine
 
+# conectando ao site
 url = "https://caioicy.github.io/slsa/leaderboards/"
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"}
 req = Request(url, headers=headers)
@@ -13,18 +13,18 @@ response = urlopen(req)
 html = response.read()
 soup = BeautifulSoup(html, 'html.parser')
 
+#convertendo a tabela do html do site em um dataframe e tratando os dados
 tabela = soup.find('table')
 df = pd.read_html(str(tabela), flavor='html5lib')[0]
 df['RANK'] = df['RANK'].astype(str)
-
 df['RANK'] = df['RANK'].str.replace('NEW!', '')
 df['RANK'] = df['RANK'].str.extract(r'(\d+)')
 rating_parts = df['RATING'].str.extract(r'(\d+)\s+(\w+\s*\w*)')
 df['RATING_NUMBER'] = rating_parts[0]
 df['RATING_ELO'] = rating_parts[1]
-
 df.drop(columns=['CHARACTERS'], inplace=True)
 
+#conexão com o banco
 conexao = psycopg2.connect(database="melee",
                            host="localhost",
                            user="postgres",
@@ -32,10 +32,12 @@ conexao = psycopg2.connect(database="melee",
                            port="5432")
 
 cursor = conexao.cursor()
+
+#criando tabela base
 cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'melee')")
 table_exists = cursor.fetchone()[0]
-
 if table_exists:
+    print("Tabela 'melee' encontrada no banco, recriando-a...")
     for index, row in df.iterrows():
         cursor.execute("DROP TABLE melee")
         cursor.execute('''
@@ -53,6 +55,7 @@ if table_exists:
             cursor.execute("INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)",
                        (row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['SETS']))
 else:
+    print("Tabela 'melee' não foi encontrada no banco, criando-a...")
     cursor.execute('''
         CREATE TABLE melee (
             ID SERIAL PRIMARY KEY,
@@ -71,16 +74,15 @@ else:
 conexao.commit()
 conexao.close()
 
-#CRIANDO TABELA COM OS CÓDIGOS
 
+#criando tabela com os códigos de conexão
 html_string = str(html)
-
 html_string_sem_colchetes = html_string.replace('[', '!')
 html_string_treated = html_string_sem_colchetes.replace(']', '!')
-
 country_codes = re.findall(r'countryCode\\\\":(.*?),', html_string_treated)
 slippi_connect_codes = re.findall(r'slippiConnectCodes\\\\":!(.*?),', html_string_treated)
-# del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país
+
+# del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
 country_codes = [code.replace('\\', '') for code in country_codes]
 country_codes = [code.replace('"', '') for code in country_codes]
 country_codes = [code.replace('}', '') for code in country_codes]
@@ -88,7 +90,6 @@ slippi_connect_codes = [code.replace('\\', '') for code in slippi_connect_codes]
 slippi_connect_codes = [code.replace('!', '') for code in slippi_connect_codes]
 slippi_connect_codes = [code.replace('}', '') for code in slippi_connect_codes]
 slippi_connect_codes = [code.replace('"', '') for code in slippi_connect_codes]
-
 
 # codigo para encontrar o texto que varia = (.*?)
 # como estão os dados lá no html:
@@ -101,12 +102,16 @@ print("Países Encontrados:")
 print(countrysize)
 print("Códigos Encontrados:")
 print(codesize)
+#isso serve para acompanhar o andamento do script
 
+#apenas criando um csv com os códigos de todo mundo para ver se está batendo sem precisar acessar o banco
 csvcodes = pd.DataFrame({'codes': slippi_connect_codes})
 csvpaises = pd.DataFrame({'paises': country_codes})
 csvcodes.to_csv('codigos_brutos.csv', index=False)
 csvpaises.to_csv('paises_brutos.csv', index=False)
 
+
+#subtituindo o dataframe original por um com códigos de país, para depois dar join na tabela melee
 df = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
 
 conexao = psycopg2.connect(database="melee",
@@ -158,71 +163,10 @@ else:
                        (row['CountryCode'], row['SlippiConnectCodes']))
 
 conexao.commit()
-conexao.close()
-
-import pandas as pd
-import psycopg2
-from urllib.request import urlopen, Request
-from bs4 import BeautifulSoup
-import re
-
-url = "https://caioicy.github.io/slsa/leaderboards/"
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"}
-req = Request(url, headers=headers)
-response = urlopen(req)
-html = response.read()
-soup = BeautifulSoup(html, 'html.parser')
-
-html_string = str(html)
-
-html_string_sem_colchetes = html_string.replace('[', '!')
-html_string_treated = html_string_sem_colchetes.replace(']', '!')
-
-# codigo para encontrar o texto que varia = (.*?)
-# como estão os dados lá no html:
-# \\\\"tr\\\\":{\\\\"slug\\\\":\\\\"tr\\\\",\\\\"tag\\\\":\\\\"TXR\\\\",
-# \\\\"countryCode\\\\":\\\\"br\\\\",\\\\"slippiConnectCodes\\\\":c\\\\"TXR#205\\\\"u,\\\\"subregion\\\\":\\\\"br\\\\"}
 
 df = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
 df.to_csv('paises_codes.csv', index=False)
-
-conexao = psycopg2.connect(database="melee",
-                           host="localhost",
-                           user="postgres",
-                           password="postgres",
-                           port="5432")
-
-cursor = conexao.cursor()
-cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'melee_paises')")
-table_exists = cursor.fetchone()[0]
-
-if table_exists:
-    for index, row in df.iterrows():
-        cursor.execute("DROP TABLE melee_paises")
-        cursor.execute('''
-        CREATE TABLE melee_paises (
-            ID SERIAL PRIMARY KEY,
-            COUNTRYCODE VARCHAR(2),
-            SLIPPICONNECTCODES VARCHAR(255)
-        )
-    ''')
-    for index, row in df.iterrows():
-        cursor.execute("INSERT INTO melee_paises (COUNTRYCODE, SLIPPICONNECTCODES) VALUES (%s, %s)",
-                       (row['CountryCode'], row['SlippiConnectCodes']))
-
-        
-else:
-    cursor.execute('''
-        CREATE TABLE melee_paises (
-            ID SERIAL PRIMARY KEY,
-            COUNTRYCODE VARCHAR(2),
-            SLIPPICONNECTCODES VARCHAR(255)
-        );
-    ''')
-
-    for index, row in df.iterrows():
-        cursor.execute("INSERT INTO melee_paises (COUNTRYCODE, SLIPPICONNECTCODES) VALUES (%s, %s)",
-                       (row['CountryCode'], row['SlippiConnectCodes']))
+#isso aqui exporta mais um csv para mostrar o procedimento pronto
 
 cursor.execute("DROP TABLE IF EXISTS paises_players")
 cursor.execute('''
@@ -304,94 +248,19 @@ SELECT
 	a.average_rating,
 	a.player_count,
 	a.most_common_rank,
-    b.geom,
+    b.geom
 FROM public.dados_pais AS a
 JOIN public.countries AS b
 ON a.countrycode = b.iso;
 ''')
-
-dados_paises = pd.read_sql_query(query_dados, conexao)
-
-conexao.commit()
-conexao.close()
-
-from matplotlib import pyplot as plt
-from matplotlib import patheffects
-
-conexao = psycopg2.connect(database="melee",
-                           host="localhost",
-                           user="postgres",
-                           password="postgres",
-                           port="5432")
-
-cursor = conexao.cursor()
-
-query_dados = "SELECT * from dados_pais"
-
-dados_paises = pd.read_sql_query(query_dados, conexao)
-
-world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-
-merged_df = pd.merge(dados_paises, world, left_on='countrycode', right_on='iso_a2', how='left')
-
-geomapa = gpd.GeoDataFrame(merged_df, geometry='geometry')
-
-geomapa.to_file("docs/average_rating.gpkg")
-geomapa.to_file("docs/player_count.gpkg")
-
-if geomapa.crs is None:
-    geomapa.set_crs("EPSG:4326", inplace=True)
-
-geocentroid = geomapa.copy()
-geocentroid['geometry'] = geomapa['geometry'].centroid
-
-geocentroid.to_file("docs/centroid.gpkg")
-
-cmap = 'Greens'
-cmap2 = 'Reds_r'
-
-x_min, x_max = -90, -30  
-y_min, y_max = -60, 10  
-geomapa_americadosul = geomapa.cx[x_min:x_max, y_min:y_max]
-fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-geomapa_americadosul.plot(column='player_count', cmap=cmap, legend=False, ax=ax)
-
-for index, row in geomapa_americadosul.iterrows():
-    text = row['player_count']
-    x, y = row['geometry'].centroid.coords[0]
-    text_effect = [patheffects.withStroke(linewidth=5, foreground='black')]
-    ax.annotate(text=text, xy=(x, y), fontsize=12, ha='center', color='white', path_effects=text_effect)
-
-ax.set_axis_off()
-ax.set_title('Jogadores por país')
-ax.text(1, -0.01, 'Fonte: Slippi Leaderboard SA (https://caioicy.github.io/slsa/leaderboards/)',
-        verticalalignment='bottom', horizontalalignment='right',
-        transform=ax.transAxes,
-        color='black', fontsize=6)
-plt.show()
-fig.savefig('docs/mapa_jogadores.png')
-
-geomapa_americaavg = geomapa.cx[x_min:x_max, y_min:y_max]
-fig2, ax = plt.subplots(1, 1, figsize=(10, 6))
-geomapa_americaavg.plot(column='average_rating', cmap=cmap2, legend=False, ax=ax)
-
-for index, row in geomapa_americaavg.iterrows():
-    avg_rating = round(row['average_rating'])
-    text = f"{avg_rating}"
-    x, y = row['geometry'].centroid.coords[0]
-    text_effect = [patheffects.withStroke(linewidth=5, foreground='black')]
-    ax.annotate(text=text, xy=(x, y), fontsize=12, ha='center', color='white', path_effects=text_effect)
-
-ax.set_title('Média de rating por país')
-ax.set_axis_off()
-ax.text(1, -0.01, 'Fonte: Slippi Leaderboard SA (https://caioicy.github.io/slsa/leaderboards/)',
-        verticalalignment='bottom', horizontalalignment='right',
-        transform=ax.transAxes,
-        color='black', fontsize=6)
-plt.show()
-
-fig2.savefig('docs/mapa_avg_rating.png')
-
-
+cursor.execute('''
+DROP TABLE public.paises_players
+''')
+cursor.execute('''
+DROP TABLE public.melee_paises
+''')
+cursor.execute('''
+DROP TABLE public.dados_pais
+''')
 conexao.commit()
 conexao.close()
