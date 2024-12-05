@@ -53,7 +53,7 @@ if table_exists:
 
     for index, row in df.iterrows():
             cursor.execute("INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)",
-                       (row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['SETS']))
+                       (row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L']))
 else:
     print("Tabela 'melee' não foi encontrada no banco, criando-a...")
     cursor.execute('''
@@ -69,7 +69,7 @@ else:
 
     for index, row in df.iterrows():
             cursor.execute("INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)",
-                       (row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['SETS']))
+                       (row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L']))
 
 conexao.commit()
 conexao.close()
