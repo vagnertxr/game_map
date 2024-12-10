@@ -30,28 +30,28 @@
         });
 
         map.on('load', () => {
-            // Adiciona a fonte de pontos
+            // Adiciona a fonte de pontos a partir de um arquivo local
             map.addSource('centroids', {
                 type: 'geojson',
-                data: 'http://localhost:8081/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput_centroids&outputFormat=application%2Fjson'
+                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/centroids.geojson' 
             });
 
-      //      map.addLayer({
-      //          id: 'centroids-layer',
-      //          type: 'circle',
-      //          source: 'centroids',
-      //          paint: {
-      //              'circle-radius': 6,
-      //              'circle-color': '#FF4500',
-      //              'circle-stroke-color': '#FFFFFF',
-      //              'circle-stroke-width': 1
-      //          }
-      //      });
+            map.addLayer({
+                id: 'centroids-layer',
+                type: 'circle',
+                source: 'centroids',
+                paint: {
+                    'circle-radius': 6,
+                    'circle-color': '#FF4500',
+                    'circle-stroke-color': '#FFFFFF',
+                    'circle-stroke-width': 1
+                }
+            });
 
-
+           
             map.addSource('polygons', {
                 type: 'geojson',
-                data: 'http://localhost:8081/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput&outputFormat=application%2Fjson'
+                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/polygons.geojson'
             });
 
             map.addLayer({
@@ -68,11 +68,10 @@
                 const coordinates = e.lngLat;
                 const properties = e.features[0].properties;
                 const popupContent = `
-                    Country:<strong> ${properties.country || 'N/A'}<br></strong>
-                    Player Count: ${properties.player_count || 'N/A'}<br>
-                    Average Rating: ${properties.average_rating || 'N/A'}<br>
-                    Most Common Rank: ${properties.most_common_rank || 'N/A'}<br>
-
+                    <strong>Country:</strong> ${properties.country || 'N/A'}<br>
+                    <strong>Player Count:</strong> ${properties.player_count || 'N/A'}<br>
+                    <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
+                    <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}
                 `;
 
                 new maplibregl.Popup()
@@ -84,12 +83,15 @@
             map.on('mouseenter', 'centroids-layer', () => {
                 map.getCanvas().style.cursor = 'pointer';
             });
+
             map.on('mouseleave', 'centroids-layer', () => {
                 map.getCanvas().style.cursor = '';
             });
+
             map.on('mouseenter', 'polygons-layer', () => {
                 map.getCanvas().style.cursor = 'pointer';
             });
+
             map.on('mouseleave', 'polygons-layer', () => {
                 map.getCanvas().style.cursor = '';
             });

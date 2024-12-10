@@ -4,6 +4,8 @@ import psycopg2
 import re
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
+import os
+import requests
 
 # conectando ao site
 url = "https://caioicy.github.io/slsa/leaderboards/"
