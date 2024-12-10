@@ -283,3 +283,26 @@ DROP TABLE public.dados_pais
 ''')
 conexao.commit()
 conexao.close()
+
+url_centroids = "http://localhost:8081/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput_centroids&outputFormat=application%2Fjson"
+
+url_polygons = "http://localhost:8081/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput&outputFormat=application%2Fjson"
+
+output_dir = "docs"
+os.makedirs(output_dir, exist_ok=True)  
+
+file_centroids = os.path.join(output_dir, "centroids.geojson")
+file_polygons = os.path.join(output_dir, "polygons.geojson")
+
+def download_geojson(url, filename):
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()  
+        with open(filename, "w", encoding="utf-8") as file:
+            file.write(response.text)
+        print(f"Arquivo salvo: {filename}")
+    except requests.RequestException as e:
+        print(f"Erro ao baixar {filename}: {e}")
+
+download_geojson(url_centroids, file_centroids)
+download_geojson(url_polygons, file_polygons)
