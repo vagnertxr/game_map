@@ -243,8 +243,9 @@ query_dados = "SELECT * from dados_pais"
 cursor.execute(''' DROP TABLE IF EXISTS public.output''')
 cursor.execute('''
 CREATE TABLE output AS 
-SELECT 
+SELECT
     b.country,
+    ROW_NUMBER() OVER () AS id,
 	a.average_rating,
 	a.player_count,
 	a.most_common_rank,
@@ -253,6 +254,22 @@ FROM public.dados_pais AS a
 JOIN public.countries AS b
 ON a.countrycode = b.iso;
 ''')
+
+cursor.execute('''
+ALTER TABLE public.output
+ADD CONSTRAINT output_pk PRIMARY KEY (id);
+''')
+
+cursor.execute(''' DROP TABLE IF EXISTS public.output_centroids''')
+cursor.execute('''
+CREATE TABLE output_centroids AS
+SELECT 
+    country,
+    id,
+    most_common_rank,
+    ST_Centroid(geom) AS centroid_geom
+FROM output;''')
+
 cursor.execute('''
 DROP TABLE public.paises_players
 ''')
