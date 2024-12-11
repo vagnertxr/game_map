@@ -11,10 +11,27 @@
         body { margin: 0; padding: 0; }
         html, body, #map { height: 100%; }
         .interface {
-            font-family: "Verdana", sans-serif;
+            font-family: "Arial", sans-serif;
             font-size: smaller;
             position: absolute;
-            bottom: 3%;
+            bottom: 10%;
+            right: 3%;
+            background: #666;
+            padding: 5px;
+            border-radius: 5px;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .interface label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .titles {
+            font-family: "Arial", sans-serif;
+            font-size: smaller;
+            position: absolute;
+            top: 3%;
             left: 3%;
             background: #666;
             padding: 10px;
@@ -22,7 +39,7 @@
             z-index: 1000;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        .interface label {
+        .titles label {
             display: block;
             font-size: 14px;
             margin-bottom: 5px;
@@ -40,12 +57,8 @@
     <div id="map"></div>
 
     <div class="interface">
-        <strong>Slippi Ranked South America Map</strong>
-        <p>Sorted by country of origin, not of residence.</p>
-        <p>Data: <a href="https://caioicy.github.io/slsa/leaderboards/" target="_blank">SLSA Leaderboards</a></p>     
-        <p>As of: <span id="data"></span> </p>  
-        <label>
-            <input type="checkbox" id="toggle-centroids" checked>
+        <center><p><strong>Layers</strong></p></center>
+          <label>  <input type="checkbox" id="toggle-centroids" checked>
             Most Common Rank
         </label>
         <label>
@@ -58,6 +71,18 @@
         </label>
 
     </div>
+
+
+    <div class="titles">
+        <center><p><strong> Slippi Ranked South America Map </strong></p></center>
+        <p>Created by TXR</p>
+        <p>Sorted by country of origin, not of residence.</p>
+        <p>Data: <a href="https://caioicy.github.io/slsa/leaderboards/" target="_blank">SLSA Leaderboards (by Caioicy)</a></p>     
+        <p>Last updated: <span id="data"></span> </p>  
+
+
+    </div>
+
     <script>
     fetch('https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/data.txt')
         .then(response => response.text())
