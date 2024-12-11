@@ -5,22 +5,70 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <style>
         body { margin: 0; padding: 0; }
         html, body, #map { height: 100%; }
+        .interface {
+            font-family: "Verdana", sans-serif;
+            font-size: smaller;
+            position: absolute;
+            bottom: 3%;
+            left: 3%;
+            background: #666;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .interface label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <style>
         .maplibregl-popup {
             max-width: 480px;
-            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            font: 10px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
         }
     </style>
 
     <div id="map"></div>
 
+    <div class="interface">
+        <strong>Slippi Ranked South America Map</strong>
+        <p>Sorted by country of origin, not of residence.</p>
+        <p>Data: <a href="https://caioicy.github.io/slsa/leaderboards/" target="_blank">SLSA Leaderboards</a></p>     
+        <p>As of: <span id="data"></span> </p>  
+        <label>
+            <input type="checkbox" id="toggle-centroids" checked>
+            Most Common Rank
+        </label>
+        <label>
+            <input type="checkbox" id="toggle-polygons" checked>
+            Player Count
+        </label>
+        <label>
+            <input type="checkbox" id="toggle-ratings" checked>
+            Average Rating
+        </label>
+
+    </div>
+    <script>
+    fetch('https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/data.txt')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('data').textContent = data;
+        })
+        .catch(error => {
+            console.error('Erro', error);
+        });
+    
+    </script>
     <script>
         const map = new maplibregl.Map({
             container: 'map',
@@ -29,29 +77,38 @@
             zoom: 1.5
         });
 
+
         map.on('load', () => {
-            // Adiciona a fonte de pontos a partir de um arquivo local
+          
+            map.addSource('polygons', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/polygons.geojson'
+            });
+
             map.addSource('centroids', {
                 type: 'geojson',
                 data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/centroids.geojson' 
             });
 
-            map.addLayer({
-                id: 'centroids-layer',
-                type: 'circle',
-                source: 'centroids',
-                paint: {
-                    'circle-radius': 6,
-                    'circle-color': '#FF4500',
-                    'circle-stroke-color': '#FFFFFF',
-                    'circle-stroke-width': 1
-                }
-            });
 
-           
-            map.addSource('polygons', {
-                type: 'geojson',
-                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/polygons.geojson'
+
+            map.addLayer({
+                id: 'ratings-layer',
+                type: 'fill',
+                source: 'polygons',
+                paint: {
+                    'fill-color': [
+            'interpolate', 
+            ['linear'], 
+            ['get', 'average_rating'], 
+            800, '#fffdbd', 
+            1200, '#fff952', 
+            1500, '#ffbf00', 
+            1750, '#ff9f00',
+            2000, '#cc8400'
+                ],
+                'fill-outline-color': '#000000' // Borda preta
+                }
             });
 
             map.addLayer({
@@ -59,10 +116,39 @@
                 type: 'fill',
                 source: 'polygons',
                 paint: {
-                    'fill-color': 'rgba(240, 209, 36, 0.4)',
-                    'fill-outline-color': '#f0ce11'
+                    'fill-color': [
+            'interpolate', 
+            ['linear'], 
+            ['get', 'player_count'], 
+            1, '#e1ffd1', 
+            5, '#63c92c', 
+            10, '#1f4a07', 
+            40, '#0e2900' 
+                ],
+                'fill-outline-color': '#000000' // Borda preta
                 }
             });
+
+            map.addLayer({
+    id: 'centroids-layer',
+    type: 'symbol',
+    source: 'centroids',
+    layout: {
+                'icon-image': 'custom-marker',
+                'text-field': ['get', 'most_common_rank'],
+                'text-font': [
+                    'Open Sans Semibold'
+                ],
+                'text-offset': [0, 0],
+                'text-anchor': 'center'
+            },
+    paint: {'text-halo-color':'#ffffff',
+            'text-halo-width' : 0.1
+     }
+});
+
+
+
 
             map.on('click', 'polygons-layer', (e) => {
                 const coordinates = e.lngLat;
@@ -74,11 +160,33 @@
                     <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}
                 `;
 
+
+                
+
                 new maplibregl.Popup()
                     .setLngLat(coordinates)
                     .setHTML(popupContent)
                     .addTo(map);
             });
+
+            map.on('click', 'ratings-layer', (e) => {
+                const coordinates = e.lngLat;
+                const properties = e.features[0].properties;
+                const popupContent = `
+                    <strong>Country:</strong> ${properties.country || 'N/A'}<br>
+                    <strong>Player Count:</strong> ${properties.player_count || 'N/A'}<br>
+                    <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
+                    <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}
+                `;
+
+               
+
+                new maplibregl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(popupContent)
+                    .addTo(map);
+            });
+
 
             map.on('mouseenter', 'centroids-layer', () => {
                 map.getCanvas().style.cursor = 'pointer';
@@ -95,6 +203,37 @@
             map.on('mouseleave', 'polygons-layer', () => {
                 map.getCanvas().style.cursor = '';
             });
+
+            map.on('mouseenter', 'ratings-layer', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'ratings-layer', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+
+            function toggleLayer(layerId, isChecked) {
+                map.setLayoutProperty(
+                    layerId,
+                    'visibility',
+                    isChecked ? 'visible' : 'none'
+                );
+            }
+
+            document.getElementById('toggle-polygons').addEventListener('change', (e) => {
+                toggleLayer('polygons-layer', e.target.checked);
+            });
+            document.getElementById('toggle-centroids').addEventListener('change', (e) => {
+                toggleLayer('centroids-layer', e.target.checked);
+            });
+            document.getElementById('toggle-ratings').addEventListener('change', (e) => {
+                toggleLayer('ratings-layer', e.target.checked);
+            });
+
+
+            
+
         });
     </script>
 </body>

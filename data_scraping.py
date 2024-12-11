@@ -6,6 +6,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import os
 import requests
+from datetime import datetime
 
 # conectando ao site
 url = "https://caioicy.github.io/slsa/leaderboards/"
@@ -293,7 +294,8 @@ os.makedirs(output_dir, exist_ok=True)
 
 file_centroids = os.path.join(output_dir, "centroids.geojson")
 file_polygons = os.path.join(output_dir, "polygons.geojson")
-
+file_data = os.path.join(output_dir, "data.txt")
+                         
 def download_geojson(url, filename):
     try:
         response = requests.get(url, timeout=10)
@@ -306,3 +308,7 @@ def download_geojson(url, filename):
 
 download_geojson(url_centroids, file_centroids)
 download_geojson(url_polygons, file_polygons)
+
+data_atual = datetime.now().strftime("%Y-%m-%d")
+with open(file_data, "w") as arquivo: 
+     arquivo.write(data_atual)
