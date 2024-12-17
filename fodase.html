@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Acidentes de trânsito de 2023 no DF</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css' />
+    <script src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+    </style>
+</head>
+<body>
+<style>
+    .maplibregl-popup {
+        max-width: 480px;
+        font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    }
+</style>
+<header style="text-align: center;"><h3>ACIDENTES DE TRÂNSITO - DETRAN/DF (2023)</h3></header>
+<div id="map"></div>
+<script>
+    const map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json', 
+        center: [-47.88, -15.79], 
+        zoom: 9.5
+    });
+
+    map.on('load', () => {
+        map.addSource('paradas-onibus', {
+            type: 'geojson',
+            data: 'https://geoservicos.detran.df.gov.br/geoserver/Detran/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=Detran:acidente_transito_2023&maxFeatures=5000000&outputFormat=application%2Fjson'
+        });
+
+        map.addLayer({
+            id: 'paradas-circle',
+            type: 'circle',
+            source: 'paradas-onibus',
+            paint: {
+                'circle-radius': 5, 
+                'circle-color': '#FF4500', 
+                'circle-stroke-color': '#FFFFFF', 
+                'circle-stroke-width': 1 
+            }
+        });
+		
+		
+map.on('click', 'paradas-circle', (e) => {
+    const coordinates = e.features[0].geometry.coordinates.slice();
+    const properties = e.features[0].properties;
+
+    const description = `
+        <div>
+			<strong>ACIDENTE DE TRÂNSITO - DETRAN</strong><br>
+            <strong>Data:</strong> ${properties.data || 'Não disponível'}<br>
+            <strong>Dia:</strong> ${properties.dia || 'Não disponível'}<br>
+            <strong>Jurisdicao:</strong> ${properties.jurisdicao || 'Não disponível'}<br>
+            <strong>RA:</strong> ${properties.ra || 'Não disponível'}<br>
+            <strong>Via/Av:</strong> ${properties.via_av || 'Não disponível'}<br>
+            <strong>Endereço:</strong> ${properties.endereco || 'Não disponível'}<br>
+            <strong>Natureza:</strong> ${properties.natureza || 'Não disponível'}<br>
+			<strong>Fatalidade:</strong> ${properties.fatalidade || 'Não disponível'}<br>
+            <strong>Vítimas Fatais:</strong> ${properties.vit_fatal || 'Não disponível'}<br>
+            <strong>Vítimas Feridas:</strong> ${properties.vit_ferido || 'Não disponível'}<br>
+            <strong>Veículo(s):</strong> ${properties.veiculo || 'Não disponível'}<br>
+            <strong>Ano:</strong> ${properties.ano || 'Não disponível'}
+        </div>
+    `;
+
+    while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+    }
+
+    // Adicione o pop-up ao mapa
+    new maplibregl.Popup()
+        .setLngLat(coordinates)
+        .setHTML(description)
+        .addTo(map);
+});
+		
+        map.addControl(new maplibregl.NavigationControl());
+		
+		
+// Change the cursor to a pointer when the mouse is over the places layer.
+        map.on('mouseenter', 'places', () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // Change it back to a pointer when it leaves.
+        map.on('mouseleave', 'places', () => {
+            map.getCanvas().style.cursor = '';
+        });
+    });
+</script>
+</body>
+</html>
