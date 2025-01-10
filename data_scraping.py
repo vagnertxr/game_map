@@ -308,7 +308,11 @@ def download_geojson(url, filename):
 
 download_geojson(url_centroids, file_centroids)
 download_geojson(url_polygons, file_polygons)
+print("Geojson baixado com sucesso")
 
 data_atual = datetime.now().strftime("%Y-%m-%d")
 with open(file_data, "w") as arquivo: 
      arquivo.write(data_atual)
+print("Data atualizada com sucesso")
+
+print("Mapa atualizado sem erros.")
