@@ -243,6 +243,12 @@ WHERE countrycode = 'null';
                ''')
 query_dados = "SELECT * from dados_pais"
 
+cursor.execute('''UPDATE dados_pais
+               SET most_common_rank = 'ALL PENDING'
+               WHERE most_common_rank IS null
+'''
+     )
+
 cursor.execute(''' DROP TABLE IF EXISTS public.output''')
 cursor.execute('''
 CREATE TABLE output AS 

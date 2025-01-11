@@ -154,10 +154,10 @@
             });
 
             map.addLayer({
-    id: 'centroids-layer',
-    type: 'symbol',
-    source: 'centroids',
-    layout: {
+              id: 'centroids-layer',
+              type: 'symbol',
+              source: 'centroids',
+              layout: {
                 'icon-image': 'custom-marker',
                 'text-field': ['get', 'most_common_rank'],
                 'text-font': [
@@ -166,7 +166,7 @@
                 'text-offset': [0, 0],
                 'text-anchor': 'center'
             },
-    paint: {'text-halo-color':'#ffffff',
+               paint: {'text-halo-color':'#ffffff',
             'text-halo-width' : 0.2
      }
 });
