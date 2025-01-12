@@ -7,7 +7,9 @@
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-    <style>
+    <script src="../dist/maplibre-gl-svg.js"></script>
+  
+   <style>
         body { margin: 0; padding: 0; }
         html, body, #map { height: 100%; }
         .interface {
@@ -84,6 +86,9 @@
     </div>
 
     <script>
+
+
+
     fetch('https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/data.txt')
         .then(response => response.text())
         .then(data => {
@@ -95,14 +100,47 @@
     
     </script>
     <script>
+        
+        var marker, svgManager;
         const map = new maplibregl.Map({
             container: 'map',
             style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
             center: [-16, -3.14],
             zoom: 1.5
         });
+       
+        map.on('load', () => {
+
+            const rankIcons = {
+        'BRONZE I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/B1.svg',
+        'BRONZE II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/B2.svg',
+        'BRONZE III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/B3.svg',
+        'SILVER I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/S1.svg',
+        'SILVER II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/S2.svg',
+        'SILVER III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/S3.svg',
+        'GOLD I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/G1.svg',
+        'GOLD II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/G2.svg',
+        'GOLD III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/G3.svg',
+        'DIAMOND I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/D1.svg',
+        'DIAMOND II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/D2.svg',
+        'DIAMOND III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/D3.svg',
+        'PLATINUM I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/P1.svg',
+        'PLATINUM II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/P2.svg',
+        'PLATINUM III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/P3.svg',
+        'GRANDMASTER': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/GM.svg',
+        'ALL PENDING': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/PN.svg'};
+        })
+
+        const loadIcons = async () => {
+                for (const [rank, svgUrl] of Object.entries(rankIcons)) {
+                    await svgManager.add(`icon-${rank}`, svgUrl);
+                }
+            };
 
 
+    loadIcons();
+
+    
         map.on('load', () => {
           
             map.addSource('polygons', {
@@ -113,8 +151,9 @@
             map.addSource('centroids', {
                 type: 'geojson',
                 data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/centroids.geojson' 
-            });
-
+           
+            })
+            
 
             map.addLayer({
                 id: 'ratings-layer',
@@ -131,7 +170,7 @@
             1750, '#ff9f00',
             2000, '#cc8400'
                 ],
-                'fill-outline-color': '#000000' // Borda preta
+                'fill-outline-color': '#000000' 
                 }
             });
 
@@ -149,30 +188,58 @@
             10, '#1f4a07', 
             40, '#0e2900' 
                 ],
-                'fill-outline-color': '#000000' // Borda preta
+                'fill-outline-color': '#000000' 
                 }
             });
 
+
+            map.on('load', () => {
+                svgManager = new maplibregl.SvgManager(map);});
+
+            
             map.addLayer({
-              id: 'centroids-layer',
-              type: 'symbol',
-              source: 'centroids',
-              layout: {
-                'icon-image': 'custom-marker',
-                'text-field': ['get', 'most_common_rank'],
-                'text-font': [
-                    'Open Sans Semibold'
-                ],
-                'text-offset': [0, 0],
-                'text-anchor': 'center'
-            },
-               paint: {'text-halo-color':'#ffffff',
-            'text-halo-width' : 0.2
-     }
-});
+        id: 'centroids-layer',
+        type: 'symbol',
+        source: 'centroids',
+        layout: {
+            'icon-image': ['concat', 'icon-', ['get', 'most_common_rank']],
+            'icon-size': 0.5, 
+            'text-field': ['get', 'most_common_rank'],
+            'text-font': ['Open Sans Bold'],
+            'text-offset': [0, 0],
+            'text-anchor': 'top'
+        },
+        paint: {
+            'text-halo-color': '#ffffff',
+            'text-halo-width': 1
+        }
+    });
 
-
-
+    loadIcons().then(() => {
+                map.addLayer({
+                    id: 'centroids-layer',
+                    type: 'symbol',
+                    source: {
+                        type: 'geojson',
+                        data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/centroids.geojson'
+                    },
+                    layout: {
+                        'icon-image': ['concat', 'icon-', ['get', 'most_common_rank']],
+                        'icon-size': 0.5,
+                        'text-field': ['get', 'most_common_rank'],
+                        'text-font': ['Open Sans Semibold'],
+                        'text-offset': [0, 1],
+                        'text-anchor': 'top'
+                    },
+                    paint: {
+                        'text-halo-color': '#ffffff',
+                        'text-halo-width': 0.2
+                    }
+                });
+            }).catch(err => console.error('Erro ao carregar ícones SVG:', err));
+    
+            map.on('load', () => {
+        svgManager = new maplibregl.SvgManager(map);});
 
             map.on('click', 'polygons-layer', (e) => {
                 const coordinates = e.lngLat;
@@ -183,10 +250,7 @@
                     <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
                     <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}
                 `;
-
-
-                
-
+             
                 new maplibregl.Popup()
                     .setLngLat(coordinates)
                     .setHTML(popupContent)
