@@ -85,7 +85,8 @@ html_string_treated = html_string_sem_colchetes.replace(']', '!')
 country_codes = re.findall(r'countryCode\\\\":(.*?),', html_string_treated)
 slippi_connect_codes = re.findall(r'slippiConnectCodes\\\\":!(.*?),', html_string_treated)
 
-# del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
+del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
+del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
 country_codes = [code.replace('\\', '') for code in country_codes]
 country_codes = [code.replace('"', '') for code in country_codes]
 country_codes = [code.replace('}', '') for code in country_codes]
