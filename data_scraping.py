@@ -2,111 +2,99 @@
 import pandas as pd
 import psycopg2
 import re
-from urllib.request import urlopen, Request
-from bs4 import BeautifulSoup
 import os
 import requests
+from bs4 import BeautifulSoup
 from datetime import datetime
 
-# conectando ao site
+# conectando ao site do caio e lendo o html
 url = "https://caioicy.github.io/slsa/leaderboards/"
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"}
-req = Request(url, headers=headers)
-response = urlopen(req)
-html = response.read()
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
+}
+response = requests.get(url, headers=headers)
+response.encoding = 'utf-8'
+html = response.text
 soup = BeautifulSoup(html, 'html.parser')
 
-#convertendo a tabela do html do site em um dataframe e tratando os dados
+# convertendo a tabela do html do site em um dataframe e tratando os dados
 tabela = soup.find('table')
 df = pd.read_html(str(tabela), flavor='html5lib')[0]
-df['RANK'] = df['RANK'].astype(str)
-df['RANK'] = df['RANK'].str.replace('NEW!', '')
-df['RANK'] = df['RANK'].str.extract(r'(\d+)')
+
+# tratamento dos dados
+df['RANK'] = df['RANK'].astype(str).str.replace('NEW!', '', regex=False).str.extract(r'(\d+)')
 rating_parts = df['RATING'].str.extract(r'(\d+)\s+(\w+\s*\w*)')
 df['RATING_NUMBER'] = rating_parts[0]
 df['RATING_ELO'] = rating_parts[1]
 df.drop(columns=['CHARACTERS'], inplace=True)
 
-#conexão com o banco
-conexao = psycopg2.connect(database="melee",
-                           host="localhost",
-                           user="postgres",
-                           password="postgres",
-                           port="5432")
+# conexão com o banco (definido como variável, aí é só chamar ela depois)
+db_config = {
+    "database": "melee",
+    "host": "192.168.15.20",
+    "user": "postgres",
+    "password": "postgres",
+    "port": "5432"
+}
 
+conexao = psycopg2.connect(**db_config)
 cursor = conexao.cursor()
 
-#criando tabela base
+# criando tabela base
+# checa se a tabela existe antes de qualquer modificação
 cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'melee')")
 table_exists = cursor.fetchone()[0]
+
 if table_exists:
     print("Tabela 'melee' encontrada no banco, recriando-a...")
-    for index, row in df.iterrows():
-        cursor.execute("DROP TABLE melee")
-        cursor.execute('''
-        CREATE TABLE melee (
-            ID SERIAL PRIMARY KEY,
-            RANK INT,
-            PLAYER VARCHAR(255),
-            RATING_NUMBER INT,
-            RATING_ELO VARCHAR(255),
-            SETS VARCHAR(255)
-        )
-    ''')
-
-    for index, row in df.iterrows():
-            cursor.execute("INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)",
-                       (row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L']))
 else:
     print("Tabela 'melee' não foi encontrada no banco, criando-a...")
-    cursor.execute('''
-        CREATE TABLE melee (
-            ID SERIAL PRIMARY KEY,
-            RANK INT,
-            PLAYER VARCHAR(255),
-            RATING_NUMBER INT,
-            RATING_ELO VARCHAR(255),
-            SETS VARCHAR(255)
-        )
-    ''')
 
-    for index, row in df.iterrows():
-            cursor.execute("INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)",
-                       (row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L']))
+# executa a limpeza e criação
+cursor.execute("DROP TABLE IF EXISTS melee CASCADE;")
+cursor.execute('''
+    CREATE TABLE melee (
+        ID SERIAL PRIMARY KEY,
+        RANK INT,
+        PLAYER VARCHAR(255),
+        RATING_NUMBER INT,
+        RATING_ELO VARCHAR(255),
+        SETS VARCHAR(255)
+    )
+''')
+
+# inserção dos dados
+query_insert_melee = "INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)"
+melee_data = [(row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L']) for _, row in df.iterrows()]
+cursor.executemany(query_insert_melee, melee_data)
 
 conexao.commit()
-conexao.close()
-
 
 #criando tabela com os códigos de conexão
 html_string = str(html)
-html_string_sem_colchetes = html_string.replace('[', '!')
-html_string_treated = html_string_sem_colchetes.replace(']', '!')
-country_codes = re.findall(r'countryCode\\\\":(.*?),', html_string_treated)
-slippi_connect_codes = re.findall(r'slippiConnectCodes\\\\":!(.*?),', html_string_treated)
+# regex aprimorado para capturar os códigos diretamente do JSON interno do site
+country_codes = re.findall(r'countryCode[\\"]+: ?[\\"]+(.*?)[\\"]+', html)
+# extraímos os códigos Slippi diretamente do DataFrame para garantir alinhamento total com os nomes
+slippi_connect_codes = df['PLAYER'].str.split().str[-1].tolist()
 
-del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
-del slippi_connect_codes[-1] # aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
-country_codes = [code.replace('\\', '') for code in country_codes]
-country_codes = [code.replace('"', '') for code in country_codes]
-country_codes = [code.replace('}', '') for code in country_codes]
-slippi_connect_codes = [code.replace('\\', '') for code in slippi_connect_codes]
-slippi_connect_codes = [code.replace('!', '') for code in slippi_connect_codes]
-slippi_connect_codes = [code.replace('}', '') for code in slippi_connect_codes]
-slippi_connect_codes = [code.replace('"', '') for code in slippi_connect_codes]
+
+# com essa linha aqui aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
+# del slippi_connect_codes[-1] 
+
+#isso serve para acompanhar o andamento do script
+print(f"Players com código de país encontrados na base: {len(country_codes)}")
+print(f"Players ativos na temporada atual: {len(slippi_connect_codes)}")
+print(f"Primeiros 3 códigos encontrados: {slippi_connect_codes[:3]}")
 
 # codigo para encontrar o texto que varia = (.*?)
-# como estão os dados lá no html:
+# aqui é um exemplo de como estão os dados lá no html:
 # \\\\"tr\\\\":{\\\\"slug\\\\":\\\\"tr\\\\",\\\\"tag\\\\":\\\\"TXR\\\\",
 # \\\\"countryCode\\\\":\\\\"br\\\\",\\\\"slippiConnectCodes\\\\":c\\\\"TXR#205\\\\"u,\\\\"subregion\\\\":\\\\"br\\\\"}
 
-countrysize = len(country_codes)
-codesize = len(slippi_connect_codes)
-print("Países Encontrados:")
-print(countrysize)
-print("Códigos Encontrados:")
-print(codesize)
-#isso serve para acompanhar o andamento do script
+# alinhando as listas para evitar erro de comprimento no DataFrame
+tamanho_minimo = min(len(country_codes), len(slippi_connect_codes))
+country_codes = country_codes[:tamanho_minimo]
+slippi_connect_codes = slippi_connect_codes[:tamanho_minimo]
 
 #apenas criando um csv com os códigos de todo mundo para ver se está batendo sem precisar acessar o banco
 csvcodes = pd.DataFrame({'codes': slippi_connect_codes})
@@ -114,71 +102,48 @@ csvpaises = pd.DataFrame({'paises': country_codes})
 csvcodes.to_csv('codigos_brutos.csv', index=False)
 csvpaises.to_csv('paises_brutos.csv', index=False)
 
-
 #subtituindo o dataframe original por um com códigos de país, para depois dar join na tabela melee
-df = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
+df_paises = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
 
-conexao = psycopg2.connect(database="melee",
-                           host="localhost",
-                           user="postgres",
-                           password="postgres",
-                           port="5432")
-
-cursor = conexao.cursor()
+# reabrindo cursor se necessário ou continuando a transação
 cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'melee_paises')")
 table_exists = cursor.fetchone()[0]
 
+# limpeza e separação de Nome/Código no SQL
 cursor.execute('''
 ALTER TABLE melee ADD COLUMN PLAYER_NAME VARCHAR(255);
-
 ALTER TABLE melee ADD COLUMN PLAYER_CODE VARCHAR(255);
-
 UPDATE melee SET PLAYER_NAME = REGEXP_REPLACE(PLAYER, ' [A-Za-z#0-9]+$', '');
-
 UPDATE melee SET PLAYER_CODE = REGEXP_REPLACE(PLAYER, '^.+ ', '');
+ALTER TABLE melee DROP COLUMN PLAYER;
 ''')
-cursor.execute("ALTER TABLE melee DROP COLUMN player")
-if table_exists:
-    for index, row in df.iterrows():
-        cursor.execute("DROP TABLE melee_paises")
-        cursor.execute('''
-        CREATE TABLE melee_paises (
-            ID SERIAL PRIMARY KEY,
-            COUNTRYCODE VARCHAR(255),
-            SLIPPICONNECTCODES VARCHAR(255)
-        )
-    ''')
-    for index, row in df.iterrows():
-        cursor.execute("INSERT INTO melee_paises (COUNTRYCODE, SLIPPICONNECTCODES) VALUES (%s, %s)",
-                       (row['CountryCode'], row['SlippiConnectCodes']))
 
-        
-else:
-    cursor.execute('''
-        CREATE TABLE melee_paises (
-            ID SERIAL PRIMARY KEY,
-            COUNTRYCODE VARCHAR(255),
-            SLIPPICONNECTCODES VARCHAR(255)
-        );
-    ''')
+# criando e populando a tabela de países
+cursor.execute("DROP TABLE IF EXISTS melee_paises;")
+cursor.execute('''
+    CREATE TABLE melee_paises (
+        ID SERIAL PRIMARY KEY,
+        COUNTRYCODE VARCHAR(255),
+        SLIPPICONNECTCODES VARCHAR(255)
+    )
+''')
 
-    for index, row in df.iterrows():
-        cursor.execute("INSERT INTO melee_paises (COUNTRYCODE, SLIPPICONNECTCODES) VALUES (%s, %s)",
-                       (row['CountryCode'], row['SlippiConnectCodes']))
+paises_data = [(row['CountryCode'], row['SlippiConnectCodes']) for _, row in df_paises.iterrows()]
+cursor.executemany("INSERT INTO melee_paises (COUNTRYCODE, SLIPPICONNECTCODES) VALUES (%s, %s)", paises_data)
 
 conexao.commit()
+print("Códigos dos jogadores inseridos no banco de dados")
 
-df = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
-df.to_csv('paises_codes.csv', index=False)
-#isso aqui exporta mais um csv para mostrar o procedimento pronto
-
+# processamento de tabelas geográficas
 cursor.execute("DROP TABLE IF EXISTS paises_players")
 cursor.execute('''
 CREATE TABLE paises_players AS
 SELECT slippiconnectcodes, player_name, rating_number, countrycode, rating_elo from melee
-INNER JOIN melee_paises
-ON player_code = slippiconnectcodes
+INNER JOIN melee_paises ON player_code = slippiconnectcodes
 ''')
+
+print("Junção entre nome dos jogadores e países dos jogadores executada")
+
 cursor.execute("DROP TABLE IF EXISTS dados_pais")
 cursor.execute('''
 CREATE TABLE dados_pais AS
@@ -201,54 +166,12 @@ GROUP BY
     pp1.countrycode
 ORDER BY 
     player_count DESC;
+''')
 
-               ''')
-
-cursor.execute('''
-UPDATE dados_pais
-SET countrycode = 'US'
-WHERE countrycode = 'us';
-UPDATE dados_pais
-SET countrycode = 'CL'
-WHERE countrycode = 'cl';
-UPDATE dados_pais
-SET countrycode = 'VE'
-WHERE countrycode = 've';
-UPDATE dados_pais
-SET countrycode = 'UY'
-WHERE countrycode = 'uy';
-UPDATE dados_pais
-SET countrycode = 'PE'
-WHERE countrycode = 'pe';
-UPDATE dados_pais
-SET countrycode = 'CO'
-WHERE countrycode = 'co';
-UPDATE dados_pais
-SET countrycode = 'EC'
-WHERE countrycode = 'ec';
-UPDATE dados_pais
-SET countrycode = 'BR'
-WHERE countrycode = 'br';
-UPDATE dados_pais
-SET countrycode = 'BO'
-WHERE countrycode = 'bo';
-UPDATE dados_pais
-SET countrycode = 'AR'
-WHERE countrycode = 'ar';
-UPDATE dados_pais
-SET countrycode = 'GT'
-WHERE countrycode = 'gt';               
-UPDATE dados_pais
-SET countrycode = NULL
-WHERE countrycode = 'null';
-               ''')
-query_dados = "SELECT * from dados_pais"
-
-cursor.execute('''UPDATE dados_pais
-               SET most_common_rank = 'ALL PENDING'
-               WHERE most_common_rank IS null
-'''
-     )
+# update único em vez de múltiplos comandos manuais
+cursor.execute("UPDATE dados_pais SET countrycode = UPPER(countrycode);")
+cursor.execute("UPDATE dados_pais SET countrycode = NULL WHERE countrycode = 'NULL';")
+cursor.execute("UPDATE dados_pais SET most_common_rank = 'ALL PENDING' WHERE most_common_rank IS NULL;")
 
 cursor.execute(''' DROP TABLE IF EXISTS public.output''')
 cursor.execute('''
@@ -256,19 +179,15 @@ CREATE TABLE output AS
 SELECT
     b.country,
     ROW_NUMBER() OVER () AS id,
-	a.average_rating,
-	a.player_count,
-	a.most_common_rank,
+    a.average_rating,
+    a.player_count,
+    a.most_common_rank,
     b.geom
 FROM public.dados_pais AS a
-JOIN public.countries AS b
-ON a.countrycode = b.iso;
+JOIN public.countries AS b ON a.countrycode = b.countrycode;
 ''')
 
-cursor.execute('''
-ALTER TABLE public.output
-ADD CONSTRAINT output_pk PRIMARY KEY (id);
-''')
+cursor.execute("ALTER TABLE public.output ADD CONSTRAINT output_pk PRIMARY KEY (id);")
 
 cursor.execute(''' DROP TABLE IF EXISTS public.output_centroids''')
 cursor.execute('''
@@ -280,21 +199,17 @@ SELECT
     ST_Centroid(geom) AS centroid_geom
 FROM output;''')
 
-cursor.execute('''
-DROP TABLE public.paises_players
-''')
-cursor.execute('''
-DROP TABLE public.melee_paises
-''')
-cursor.execute('''
-DROP TABLE public.dados_pais
-''')
+# limpeza final das tabelas de processamento
+cursor.execute("DROP TABLE IF EXISTS public.paises_players")
+cursor.execute("DROP TABLE IF EXISTS public.melee_paises")
+cursor.execute("DROP TABLE IF EXISTS public.dados_pais")
+
 conexao.commit()
 conexao.close()
 
-url_centroids = "http://localhost:8081/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput_centroids&outputFormat=application%2Fjson"
-
-url_polygons = "http://localhost:8081/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput&outputFormat=application%2Fjson"
+# integração geoserver
+url_centroids = "http://192.168.15.20:8082/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput_centroids&maxFeatures=500&outputFormat=application%2Fjson"
+url_polygons = "http://192.168.15.20:8082/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput&maxFeatures=500&outputFormat=application%2Fjson"
 
 output_dir = "docs"
 os.makedirs(output_dir, exist_ok=True)  
@@ -315,11 +230,10 @@ def download_geojson(url, filename):
 
 download_geojson(url_centroids, file_centroids)
 download_geojson(url_polygons, file_polygons)
-print("Geojson baixado com sucesso")
 
 data_atual = datetime.now().strftime("%Y-%m-%d")
 with open(file_data, "w") as arquivo: 
      arquivo.write(data_atual)
 print("Data atualizada com sucesso")
 
-print("Mapa atualizado sem erros.")
+print("Mapa (output) atualizado.")
