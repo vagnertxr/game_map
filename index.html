@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-    <script src="../dist/maplibre-gl-svg.js"></script>
   
    <style>
         body { margin: 0; padding: 0; }
@@ -89,7 +88,7 @@
 
 
 
-    fetch('https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/data.txt')
+    fetch('https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/data.txt')
         .then(response => response.text())
         .then(data => {
             document.getElementById('data').textContent = data;
@@ -100,148 +99,161 @@
     
     </script>
     <script>
-        
-        var marker, svgManager;
+        var svgManager;
         const map = new maplibregl.Map({
             container: 'map',
             style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
             center: [-16, -3.14],
             zoom: 1.5
         });
-       
-        map.on('load', () => {
 
-            const rankIcons = {
-        'BRONZE I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/B1.svg',
-        'BRONZE II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/B2.svg',
-        'BRONZE III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/B3.svg',
-        'SILVER I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/S1.svg',
-        'SILVER II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/S2.svg',
-        'SILVER III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/S3.svg',
-        'GOLD I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/G1.svg',
-        'GOLD II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/G2.svg',
-        'GOLD III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/G3.svg',
-        'DIAMOND I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/D1.svg',
-        'DIAMOND II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/D2.svg',
-        'DIAMOND III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/D3.svg',
-        'PLATINUM I': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/P1.svg',
-        'PLATINUM II': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/P2.svg',
-        'PLATINUM III': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/P3.svg',
-        'GRANDMASTER': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/GM.svg',
-        'ALL PENDING': 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/assets/PN.svg'};
-        })
+        // Icon definitions (use /main/ branch raw URLs)
+        const rankIcons = {
+            'BRONZE I': 'assets/B1.svg',
+            'BRONZE II': 'assets/B2.svg',
+            'BRONZE III': 'assets/B3.svg',
+            'SILVER I': 'assets/S1.svg',
+            'SILVER II': 'assets/S2.svg',
+            'SILVER III': 'assets/S3.svg',
+            'GOLD I': 'assets/G1.svg',
+            'GOLD II': 'assets/G2.svg',
+            'GOLD III': 'assets/G3.svg',
+            'DIAMOND I': 'assets/D1.svg',
+            'DIAMOND II': 'assets/D2.svg',
+            'DIAMOND III': 'assets/D3.svg',
+            'PLATINUM I': 'assets/P1.svg',
+            'PLATINUM II': 'assets/P2.svg',
+            'PLATINUM III': 'assets/P3.svg',
+            'GRANDMASTER': 'assets/GM.svg',
+            'ALL PENDING': 'assets/PN.svg'
+        };
 
+        // No rating icons needed — we show icons by `most_common_rank` only.
+
+        // Load all icons using fetch + createImageBitmap (more robust for SVGs)
         const loadIcons = async () => {
-                for (const [rank, svgUrl] of Object.entries(rankIcons)) {
-                    await svgManager.add(`icon-${rank}`, svgUrl);
+            const load = async (key, url) => {
+                try {
+                    const resp = await fetch(url);
+                    if (!resp.ok) {
+                        console.error('Erro HTTP ao buscar ícone', key, url, resp.status);
+                        return;
+                    }
+                    const blob = await resp.blob();
+
+                    // Try createImageBitmap (preferred)
+                    try {
+                        const bitmap = await createImageBitmap(blob);
+                        if (map.hasImage && map.hasImage(key)) {
+                            try { map.removeImage(key); } catch (_) {}
+                        }
+                        map.addImage(key, bitmap);
+                        return;
+                    } catch (createErr) {
+                        // Fallback: use HTMLImageElement
+                        const img = new Image();
+                        img.onload = () => {
+                            try {
+                                if (map.hasImage && map.hasImage(key)) {
+                                    try { map.removeImage(key); } catch (_) {}
+                                }
+                                map.addImage(key, img);
+                            } catch (e) { console.error('Erro ao adicionar imagem (fallback)', key, e); }
+                        };
+                        img.onerror = (e) => { console.error('Erro ao carregar imagem fallback', key, url, e); };
+                        img.src = URL.createObjectURL(blob);
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Erro ao carregar ícone', key, url, err);
                 }
             };
 
+            for (const [rank, url] of Object.entries(rankIcons)) {
+                await load(`icon-${rank}`, url);
+            }
+        };
 
-    loadIcons();
+        map.on('load', async () => {
+            // Try to use SvgManager if available, otherwise fallback to map.loadImage
+            if (maplibregl.SvgManager) {
+                try { svgManager = new maplibregl.SvgManager(map); } catch (e) { /* ignore */ }
+            }
+            await loadIcons();
 
-    
-        map.on('load', () => {
-          
             map.addSource('polygons', {
                 type: 'geojson',
-                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/polygons.geojson'
+                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/polygons.geojson'
             });
 
             map.addSource('centroids', {
                 type: 'geojson',
-                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/centroids.geojson' 
-           
-            })
-            
+                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson'
+            });
 
+            // Fill by average rating
             map.addLayer({
                 id: 'ratings-layer',
                 type: 'fill',
                 source: 'polygons',
                 paint: {
                     'fill-color': [
-            'interpolate', 
-            ['linear'], 
-            ['get', 'average_rating'], 
-            800, '#fffdbd', 
-            1200, '#fff952', 
-            1500, '#ffbf00', 
-            1750, '#ff9f00',
-            2000, '#cc8400'
-                ],
-                'fill-outline-color': '#000000' 
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'average_rating'],
+                        800, '#fffdbd',
+                        1200, '#fff952',
+                        1500, '#ffbf00',
+                        1750, '#ff9f00',
+                        2000, '#cc8400'
+                    ],
+                    'fill-outline-color': '#000000'
                 }
             });
 
+            // Fill by player count
             map.addLayer({
                 id: 'polygons-layer',
                 type: 'fill',
                 source: 'polygons',
                 paint: {
                     'fill-color': [
-            'interpolate', 
-            ['linear'], 
-            ['get', 'player_count'], 
-            1, '#e1ffd1', 
-            5, '#63c92c', 
-            10, '#1f4a07', 
-            40, '#0e2900' 
-                ],
-                'fill-outline-color': '#000000' 
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'player_count'],
+                        1, '#e1ffd1',
+                        5, '#63c92c',
+                        10, '#1f4a07',
+                        40, '#0e2900'
+                    ],
+                    'fill-outline-color': '#000000'
                 }
             });
 
-
-            map.on('load', () => {
-                svgManager = new maplibregl.SvgManager(map);});
-
-            
+            // Centroids showing most common rank (icon + label)
             map.addLayer({
-        id: 'centroids-layer',
-        type: 'symbol',
-        source: 'centroids',
-        layout: {
-            'icon-image': ['concat', 'icon-', ['get', 'most_common_rank']],
-            'icon-size': 0.5, 
-            'text-field': ['get', 'most_common_rank'],
-            'text-font': ['Open Sans Bold'],
-            'text-offset': [0, 0],
-            'text-anchor': 'top'
-        },
-        paint: {
-            'text-halo-color': '#ffffff',
-            'text-halo-width': 1
-        }
-    });
+                id: 'centroids-layer',
+                type: 'symbol',
+                source: 'centroids',
+                layout: {
+                    'icon-image': ['concat', 'icon-', ['get', 'most_common_rank']],
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.045, 5, 0.1125],
+                    'icon-allow-overlap': true,
+                    'text-field': ['get', 'most_common_rank'],
+                    'text-font': ['Open Sans Semibold'],
+                    'text-offset': [0, 1],
+                    'text-anchor': 'top'
+                },
+                paint: {
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 0.2
+                }
+            });
 
-    loadIcons().then(() => {
-                map.addLayer({
-                    id: 'centroids-layer',
-                    type: 'symbol',
-                    source: {
-                        type: 'geojson',
-                        data: 'https://raw.githubusercontent.com/vagnertxr/game_map/refs/heads/main/docs/centroids.geojson'
-                    },
-                    layout: {
-                        'icon-image': ['concat', 'icon-', ['get', 'most_common_rank']],
-                        'icon-size': 0.5,
-                        'text-field': ['get', 'most_common_rank'],
-                        'text-font': ['Open Sans Semibold'],
-                        'text-offset': [0, 1],
-                        'text-anchor': 'top'
-                    },
-                    paint: {
-                        'text-halo-color': '#ffffff',
-                        'text-halo-width': 0.2
-                    }
-                });
-            }).catch(err => console.error('Erro ao carregar ícones SVG:', err));
-    
-            map.on('load', () => {
-        svgManager = new maplibregl.SvgManager(map);});
+            // (Removed) average-rating icon layer — centroids show `most_common_rank` icons.
 
-            map.on('click', 'polygons-layer', (e) => {
+            // Popups for polygons and ratings fills
+            const showPopup = (e) => {
                 const coordinates = e.lngLat;
                 const properties = e.features[0].properties;
                 const popupContent = `
@@ -250,63 +262,24 @@
                     <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
                     <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}
                 `;
-             
                 new maplibregl.Popup()
                     .setLngLat(coordinates)
                     .setHTML(popupContent)
                     .addTo(map);
+            };
+
+            map.on('click', 'polygons-layer', showPopup);
+            map.on('click', 'ratings-layer', showPopup);
+
+            // Cursor pointer for interactive layers
+            ['centroids-layer', 'polygons-layer', 'ratings-layer'].forEach(id => {
+                map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
+                map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
             });
-
-            map.on('click', 'ratings-layer', (e) => {
-                const coordinates = e.lngLat;
-                const properties = e.features[0].properties;
-                const popupContent = `
-                    <strong>Country:</strong> ${properties.country || 'N/A'}<br>
-                    <strong>Player Count:</strong> ${properties.player_count || 'N/A'}<br>
-                    <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
-                    <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}
-                `;
-
-               
-
-                new maplibregl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML(popupContent)
-                    .addTo(map);
-            });
-
-
-            map.on('mouseenter', 'centroids-layer', () => {
-                map.getCanvas().style.cursor = 'pointer';
-            });
-
-            map.on('mouseleave', 'centroids-layer', () => {
-                map.getCanvas().style.cursor = '';
-            });
-
-            map.on('mouseenter', 'polygons-layer', () => {
-                map.getCanvas().style.cursor = 'pointer';
-            });
-
-            map.on('mouseleave', 'polygons-layer', () => {
-                map.getCanvas().style.cursor = '';
-            });
-
-            map.on('mouseenter', 'ratings-layer', () => {
-                map.getCanvas().style.cursor = 'pointer';
-            });
-
-            map.on('mouseleave', 'ratings-layer', () => {
-                map.getCanvas().style.cursor = '';
-            });
-
 
             function toggleLayer(layerId, isChecked) {
-                map.setLayoutProperty(
-                    layerId,
-                    'visibility',
-                    isChecked ? 'visible' : 'none'
-                );
+                if (!map.getLayer(layerId)) return;
+                map.setLayoutProperty(layerId, 'visibility', isChecked ? 'visible' : 'none');
             }
 
             document.getElementById('toggle-polygons').addEventListener('change', (e) => {
@@ -318,10 +291,6 @@
             document.getElementById('toggle-ratings').addEventListener('change', (e) => {
                 toggleLayer('ratings-layer', e.target.checked);
             });
-
-
-            
-
         });
     </script>
 </body>

@@ -4,8 +4,13 @@ import psycopg2
 import re
 import os
 import requests
+from io import StringIO
 from bs4 import BeautifulSoup
 from datetime import datetime
+
+#direcionando o diretório base para evitar do python não entender
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+output_path = os.path.join(BASE_DIR, 'docs', 'data.geojson')
 
 # conectando ao site do caio e lendo o html
 url = "https://caioicy.github.io/slsa/leaderboards/"
@@ -18,8 +23,9 @@ html = response.text
 soup = BeautifulSoup(html, 'html.parser')
 
 # convertendo a tabela do html do site em um dataframe e tratando os dados
+# StringIO evita "File name too long" no Linux: pandas não interpreta o HTML como caminho de arquivo
 tabela = soup.find('table')
-df = pd.read_html(str(tabela), flavor='html5lib')[0]
+df = pd.read_html(StringIO(str(tabela)), flavor='html5lib')[0]
 
 # tratamento dos dados
 df['RANK'] = df['RANK'].astype(str).str.replace('NEW!', '', regex=False).str.extract(r'(\d+)')
@@ -28,13 +34,13 @@ df['RATING_NUMBER'] = rating_parts[0]
 df['RATING_ELO'] = rating_parts[1]
 df.drop(columns=['CHARACTERS'], inplace=True)
 
-# conexão com o banco (definido como variável, aí é só chamar ela depois)
+# conexão com o banco (variáveis de ambiente no servidor: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT)
 db_config = {
-    "database": "melee",
-    "host": "192.168.15.20",
-    "user": "postgres",
-    "password": "postgres",
-    "port": "5432"
+    "database": os.environ.get("DB_NAME", "melee"),
+    "host": os.environ.get("DB_HOST", "192.168.15.20"),
+    "user": os.environ.get("DB_USER", "postgres"),
+    "password": os.environ.get("DB_PASSWORD", "postgres"),
+    "port": os.environ.get("DB_PORT", "5432"),
 }
 
 conexao = psycopg2.connect(**db_config)
@@ -207,9 +213,10 @@ cursor.execute("DROP TABLE IF EXISTS public.dados_pais")
 conexao.commit()
 conexao.close()
 
-# integração geoserver
-url_centroids = "http://192.168.15.20:8082/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput_centroids&maxFeatures=500&outputFormat=application%2Fjson"
-url_polygons = "http://192.168.15.20:8082/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput&maxFeatures=500&outputFormat=application%2Fjson"
+# integração geoserver (no servidor: GEOSERVER_BASE=http://127.0.0.1:8082 se GeoServer estiver local)
+geoserver_base = os.environ.get("GEOSERVER_BASE", "http://192.168.15.20:8082")
+url_centroids = f"{geoserver_base}/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput_centroids&maxFeatures=500&outputFormat=application%2Fjson"
+url_polygons = f"{geoserver_base}/geoserver/melee/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=melee%3Aoutput&maxFeatures=500&outputFormat=application%2Fjson"
 
 output_dir = "docs"
 os.makedirs(output_dir, exist_ok=True)  
