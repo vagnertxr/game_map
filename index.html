@@ -47,6 +47,25 @@
             z-index: 1000;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
+        @media (max-width: 600px) {
+            .titles {
+                font-size: 11px;
+                padding: 6px;
+                top: 1%;
+                left: 1%;
+                right: 1%;
+                border-radius: 6px;
+                max-width: calc(100% - 2%);
+            }
+            .titles p, .titles label {
+                margin-bottom: 4px;
+                line-height: 1.1;
+            }
+            .titles center p strong {
+                display: block;
+                font-size: 12px;
+            }
+        }
         .titles label {
             display: block;
             font-size: 14px;
