@@ -6,20 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="assets/favicon-32.png">
+    <link rel="shortcut icon" href="assets/favicon-32.png">
+
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   
    <style>
-        body { margin: 0; padding: 0; }
-        html, body, #map { height: 100%; }
+       body { font-family: 'Roboto', Arial, sans-serif; margin: 0; padding: 0; }
+       html, body, #map { height: 100%; }
         .interface {
-            font-family: "Arial", sans-serif;
+            font-family: 'Roboto', Arial, sans-serif;
             font-size: smaller;
             position: absolute;
             bottom: 10%;
             right: 3%;
-            background: #666;
+            background: #111;
+            color: #ffffff;
             padding: 5px;
-            border-radius: 5px;
+            border-radius: 10px;
             z-index: 100;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
@@ -27,24 +32,28 @@
             display: block;
             font-size: 14px;
             margin-bottom: 5px;
+            color: inherit;
         }
         .titles {
-            font-family: "Arial", sans-serif;
+            font-family: 'Roboto', Arial, sans-serif;
             font-size: smaller;
             position: absolute;
             top: 3%;
             left: 3%;
-            background: #666;
-            padding: 10px;
-            border-radius: 5px;
+            background: #111;
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
             z-index: 1000;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .titles label {
             display: block;
             font-size: 14px;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
+            color: inherit;
         }
+        .titles a { color: #ffffff; }
     </style>
 </head>
 <body>
@@ -76,12 +85,14 @@
 
     <div class="titles">
         <center><p><strong> Slippi Ranked South America Map </strong></p></center>
-        <p>Created by TXR</p>
+        <p>Created by <a href="https://github.com/vagnertxr" target="_blank">TXR</a></p>
+        <p>Data: <a href="https://caioicy.github.io/slsa/leaderboards/" target="_blank">SLSA Leaderboards (by Caioicy)</a> - Huge thanks! 🐸</p>     
         <p>Sorted by country of origin, not of residence.</p>
-        <p>Data: <a href="https://caioicy.github.io/slsa/leaderboards/" target="_blank">SLSA Leaderboards (by Caioicy)</a></p>     
-        <p>Last updated: <span id="data"></span> </p>  
-
-
+        <p>&nbsp;</p>
+        <center><p>Last updated: <span id="data"></span> </p></center>
+        <center><p>Updates automatically every week</p></center>
+        <p>&nbsp;</p>
+        <center><p><strong> <a href="https://slippi.gg" target="_blank">Play Slippi Netplay</a></strong></p></center>
     </div>
 
     <script>
@@ -103,34 +114,32 @@
         const map = new maplibregl.Map({
             container: 'map',
             style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-            center: [-16, -3.14],
-            zoom: 1.5
+            center: [-55, -25],
+            zoom: 3
         });
 
-        // Icon definitions (use /main/ branch raw URLs)
+        
         const rankIcons = {
-            'BRONZE I': 'assets/B1.svg',
-            'BRONZE II': 'assets/B2.svg',
-            'BRONZE III': 'assets/B3.svg',
-            'SILVER I': 'assets/S1.svg',
-            'SILVER II': 'assets/S2.svg',
-            'SILVER III': 'assets/S3.svg',
-            'GOLD I': 'assets/G1.svg',
-            'GOLD II': 'assets/G2.svg',
-            'GOLD III': 'assets/G3.svg',
-            'DIAMOND I': 'assets/D1.svg',
-            'DIAMOND II': 'assets/D2.svg',
-            'DIAMOND III': 'assets/D3.svg',
-            'PLATINUM I': 'assets/P1.svg',
-            'PLATINUM II': 'assets/P2.svg',
-            'PLATINUM III': 'assets/P3.svg',
-            'GRANDMASTER': 'assets/GM.svg',
-            'ALL PENDING': 'assets/PN.svg'
+            'BRONZE I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B1.svg',
+            'BRONZE II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B2.svg',
+            'BRONZE III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B3.svg',
+            'SILVER I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S1.svg',
+            'SILVER II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S2.svg',
+            'SILVER III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S3.svg',
+            'GOLD I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G1.svg',
+            'GOLD II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G2.svg',
+            'GOLD III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G3.svg',
+            'DIAMOND I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D1.svg',
+            'DIAMOND II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D2.svg',
+            'DIAMOND III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D3.svg',
+            'PLATINUM I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P1.svg',
+            'PLATINUM II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P2.svg',
+            'PLATINUM III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P3.svg',
+            'GRANDMASTER': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/GM.svg',
+            'ALL PENDING': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/PN.svg'
         };
 
-        // No rating icons needed — we show icons by `most_common_rank` only.
 
-        // Load all icons using fetch + createImageBitmap (more robust for SVGs)
         const loadIcons = async () => {
             const load = async (key, url) => {
                 try {
@@ -141,7 +150,7 @@
                     }
                     const blob = await resp.blob();
 
-                    // Try createImageBitmap (preferred)
+                    
                     try {
                         const bitmap = await createImageBitmap(blob);
                         if (map.hasImage && map.hasImage(key)) {
@@ -150,7 +159,7 @@
                         map.addImage(key, bitmap);
                         return;
                     } catch (createErr) {
-                        // Fallback: use HTMLImageElement
+                        
                         const img = new Image();
                         img.onload = () => {
                             try {
@@ -175,7 +184,7 @@
         };
 
         map.on('load', async () => {
-            // Try to use SvgManager if available, otherwise fallback to map.loadImage
+            
             if (maplibregl.SvgManager) {
                 try { svgManager = new maplibregl.SvgManager(map); } catch (e) { /* ignore */ }
             }
@@ -246,11 +255,10 @@
                 },
                 paint: {
                     'text-halo-color': '#ffffff',
-                    'text-halo-width': 0.2
+                    'text-halo-width': 1
                 }
             });
 
-            // (Removed) average-rating icon layer — centroids show `most_common_rank` icons.
 
             // Popups for polygons and ratings fills
             const showPopup = (e) => {
@@ -271,7 +279,7 @@
             map.on('click', 'polygons-layer', showPopup);
             map.on('click', 'ratings-layer', showPopup);
 
-            // Cursor pointer for interactive layers
+            
             ['centroids-layer', 'polygons-layer', 'ratings-layer'].forEach(id => {
                 map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
                 map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
