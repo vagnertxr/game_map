@@ -1,3 +1,6 @@
 /venv
 rotina.log
 executar_rotina.sh
+/debug
+codigos_brutos.csv
+paises_brutos.csv

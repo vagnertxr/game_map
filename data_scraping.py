@@ -8,11 +8,11 @@ from io import StringIO
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-#direcionando o diretório base para evitar do python não entender
+# direcionando o diretório base
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 output_path = os.path.join(BASE_DIR, 'docs', 'data.geojson')
 
-# conectando ao site do caio e lendo o html
+# conectando ao site e lendo o html
 url = "https://caioicy.github.io/slsa/leaderboards/"
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
@@ -34,7 +34,7 @@ df['RATING_NUMBER'] = rating_parts[0]
 df['RATING_ELO'] = rating_parts[1]
 df.drop(columns=['CHARACTERS'], inplace=True)
 
-# conexão com o banco (variáveis de ambiente no servidor: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT)
+# conexão com o banco (variáveis de ambiente no servidor)
 db_config = {
     "database": os.environ.get("DB_NAME", "melee"),
     "host": os.environ.get("DB_HOST", "192.168.15.20"),
@@ -46,17 +46,7 @@ db_config = {
 conexao = psycopg2.connect(**db_config)
 cursor = conexao.cursor()
 
-# criando tabela base
-# checa se a tabela existe antes de qualquer modificação
-cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'melee')")
-table_exists = cursor.fetchone()[0]
-
-if table_exists:
-    print("Tabela 'melee' encontrada no banco, recriando-a...")
-else:
-    print("Tabela 'melee' não foi encontrada no banco, criando-a...")
-
-# executa a limpeza e criação
+# criando tabela base (recria sempre)
 cursor.execute("DROP TABLE IF EXISTS melee CASCADE;")
 cursor.execute('''
     CREATE TABLE melee (
@@ -73,47 +63,91 @@ cursor.execute('''
 query_insert_melee = "INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)"
 melee_data = [(row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L']) for _, row in df.iterrows()]
 cursor.executemany(query_insert_melee, melee_data)
-
 conexao.commit()
 
-#criando tabela com os códigos de conexão
-html_string = str(html)
-# regex aprimorado para capturar os códigos diretamente do JSON interno do site
-country_codes = re.findall(r'countryCode[\\"]+: ?[\\"]+(.*?)[\\"]+', html)
-# extraímos os códigos Slippi diretamente do DataFrame para garantir alinhamento total com os nomes
-slippi_connect_codes = df['PLAYER'].str.split().str[-1].tolist()
+# preparar html_string para extração
+html_string = html
 
+# Extrair slippiConnectCodes + countryCode de forma robusta
+# Alguns JSONs embutidos usam aspas escapadas (\") dentro do HTML; lidamos com ambos os casos.
+country_codes = []
+slippi_connect_codes = []
 
-# com essa linha aqui aqui, eu apago o código do último player, já que ele não possui país (não entendo como, mas funciona)
-# del slippi_connect_codes[-1] 
+# função auxiliar para processar um bloco slugMap (texto já com aspas normais)
+def process_slugmap_block(block_text):
+    codes = []
+    countries = []
+    for m in re.finditer(r'"([^\"]+)"\s*:\s*\{(.*?)\}(?:,|$)', block_text, flags=re.DOTALL):
+        obj = m.group(2)
+        scs = re.findall(r'"([A-Za-z]+#\d+)"', obj)
+        if not scs:
+            continue
+        sc = scs[0]
+        cc_m = re.search(r'countryCode"\s*:\s*"([^\"]+)"', obj)
+        cc = cc_m.group(1).strip() if cc_m else None
+        codes.append(sc)
+        countries.append(cc)
+    return codes, countries
 
-#isso serve para acompanhar o andamento do script
-print(f"Players com código de país encontrados na base: {len(country_codes)}")
+# tentar forma "normal" primeiro
+sm_match = re.search(r'"slugMap"\s*:\s*\{(.*?)\}\s*,\s*"leaderboard"', html_string, flags=re.DOTALL)
+if sm_match:
+    block = sm_match.group(1)
+    codes, countries = process_slugmap_block(block)
+    slippi_connect_codes.extend(codes)
+    country_codes.extend(countries)
+else:
+    # tentar detectar conteúdo com aspas escapadas (\") e desserializar as aspas
+    if '\\"slugMap\\"' in html_string:
+        # transformar \" em " para facilitar regex
+        unescaped = html_string.replace('\\\"', '"')
+        sm2 = re.search(r'"slugMap"\s*:\s*\{(.*?)\}\s*,\s*"leaderboard"', unescaped, flags=re.DOTALL)
+        if sm2:
+            block = sm2.group(1)
+            codes, countries = process_slugmap_block(block)
+            slippi_connect_codes.extend(codes)
+            country_codes.extend(countries)
+
+# fallback: procurar arrays slippiConnectCodes diretamente no documento
+if not slippi_connect_codes:
+    for m in re.finditer(r'"slippiConnectCodes"\s*:\s*\[([^\]]*)\]', html_string, flags=re.DOTALL):
+        arr = m.group(1)
+        scs = re.findall(r'"([A-Za-z]+#\d+)"', arr)
+        if not scs:
+            continue
+        sc = scs[0]
+        # procurar countryCode nas proximidades
+        start = max(0, m.start()-400)
+        end = min(len(html_string), m.end()+400)
+        snippet = html_string[start:end]
+        cc_m = re.search(r'countryCode"\s*:\s*"([^\"]+)"', snippet)
+        cc = cc_m.group(1).strip() if cc_m else None
+        slippi_connect_codes.append(sc)
+        country_codes.append(cc)
+
+# trims e estatísticas
+if slippi_connect_codes:
+    tamanho_minimo = min(len(country_codes), len(slippi_connect_codes))
+    country_codes = country_codes[:tamanho_minimo]
+    slippi_connect_codes = slippi_connect_codes[:tamanho_minimo]
+else:
+    country_codes = []
+    slippi_connect_codes = []
+
+print(f"Players com código de país encontrados na base: {len([c for c in country_codes if c])}")
 print(f"Players ativos na temporada atual: {len(slippi_connect_codes)}")
 print(f"Primeiros 3 códigos encontrados: {slippi_connect_codes[:3]}")
 
-# codigo para encontrar o texto que varia = (.*?)
-# aqui é um exemplo de como estão os dados lá no html:
-# \\\\"tr\\\\":{\\\\"slug\\\\":\\\\"tr\\\\",\\\\"tag\\\\":\\\\"TXR\\\\",
-# \\\\"countryCode\\\\":\\\\"br\\\\",\\\\"slippiConnectCodes\\\\":c\\\\"TXR#205\\\\"u,\\\\"subregion\\\\":\\\\"br\\\\"}
+# salvar dumps de depuração
+os.makedirs('debug', exist_ok=True)
+pd.DataFrame({'codes': slippi_connect_codes}).to_csv(os.path.join('debug', 'codigos_brutos.csv'), index=False)
+pd.DataFrame({'paises': country_codes}).to_csv(os.path.join('debug', 'paises_brutos.csv'), index=False)
+pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes}).to_csv(os.path.join('debug', 'df_paises_raw.csv'), index=False)
+df.to_csv(os.path.join('debug', 'melee_table.csv'), index=False)
 
-# alinhando as listas para evitar erro de comprimento no DataFrame
-tamanho_minimo = min(len(country_codes), len(slippi_connect_codes))
-country_codes = country_codes[:tamanho_minimo]
-slippi_connect_codes = slippi_connect_codes[:tamanho_minimo]
-
-#apenas criando um csv com os códigos de todo mundo para ver se está batendo sem precisar acessar o banco
-csvcodes = pd.DataFrame({'codes': slippi_connect_codes})
-csvpaises = pd.DataFrame({'paises': country_codes})
-csvcodes.to_csv('codigos_brutos.csv', index=False)
-csvpaises.to_csv('paises_brutos.csv', index=False)
-
-#subtituindo o dataframe original por um com códigos de país, para depois dar join na tabela melee
+# substituir dataframe original por df_paises filtrado (apenas CountryCode válidos)
 df_paises = pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes})
-
-# reabrindo cursor se necessário ou continuando a transação
-cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'melee_paises')")
-table_exists = cursor.fetchone()[0]
+df_paises = df_paises[df_paises['CountryCode'].notnull() & (df_paises['CountryCode'] != '')]
 
 # limpeza e separação de Nome/Código no SQL
 cursor.execute('''
@@ -135,10 +169,12 @@ cursor.execute('''
 ''')
 
 paises_data = [(row['CountryCode'], row['SlippiConnectCodes']) for _, row in df_paises.iterrows()]
-cursor.executemany("INSERT INTO melee_paises (COUNTRYCODE, SLIPPICONNECTCODES) VALUES (%s, %s)", paises_data)
-
-conexao.commit()
-print("Códigos dos jogadores inseridos no banco de dados")
+if paises_data:
+    cursor.executemany("INSERT INTO melee_paises (COUNTRYCODE, SLIPPICONNECTCODES) VALUES (%s, %s)", paises_data)
+    conexao.commit()
+    print("Códigos dos jogadores inseridos no banco de dados")
+else:
+    print("Nenhum par CountryCode+SlippiConnectCode para inserir em melee_paises")
 
 # processamento de tabelas geográficas
 cursor.execute("DROP TABLE IF EXISTS paises_players")
@@ -204,11 +240,6 @@ SELECT
     most_common_rank,
     ST_Centroid(geom) AS centroid_geom
 FROM output;''')
-
-# limpeza final das tabelas de processamento
-cursor.execute("DROP TABLE IF EXISTS public.paises_players")
-cursor.execute("DROP TABLE IF EXISTS public.melee_paises")
-cursor.execute("DROP TABLE IF EXISTS public.dados_pais")
 
 conexao.commit()
 conexao.close()
