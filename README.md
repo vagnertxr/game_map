@@ -1,6 +1,6 @@
 ## Slippi Ranked South America Map
 
-Este projeto consiste em um mapa interativo dos jogadores de **Super Smash Bros. Melee** na América do Sul, utilizando dados coletados por meio de técnicas de web scraping e processados em um sistema de banco de dados espaciais.
+Este projeto consiste em um mapa interativo dos jogadores de **[Slippi Netplay](https://slippi.gg)** na América do Sul, utilizando dados coletados por meio de técnicas de web scraping e processados em um sistema de banco de dados espaciais.
 
 ### Funcionamento e Arquitetura
 
@@ -16,7 +16,7 @@ A rotina de atualização dos dados é executada semanalmente em um servidor loc
 
 **Fluxo de execução**:
 - Sincronização semanal do repositório via rotina agendada
-- Execução do script Python
+- Tratamento e junção dos dados
 - Atualização das tabelas espaciais no banco de dados local e sua disponibilização em camada no GeoServer
 - Exportação dos arquivos GeoJSON atualizados localmente
 - Deploy automático dos novos dados para o GitHub Pages
