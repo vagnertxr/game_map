@@ -19,7 +19,7 @@
             font-family: 'Roboto', Arial, sans-serif;
             font-size: smaller;
             position: absolute;
-            bottom: 10%;
+            bottom: 5%;
             right: 3%;
             background: #111;
             color: #ffffff;
@@ -50,14 +50,33 @@
         }
         @media (max-width: 600px) {
             .titles {
-                font-size: 11px;
+                font-size: 10px;
                 padding: 6px;
                 top: 1%;
                 left: 1%;
                 right: 1%;
-                border-radius: 6px;
+                border-radius: 10px;
                 max-width: calc(100% - 2%);
             }
+            .interface {
+                font-family: 'Roboto', Arial, sans-serif;
+               font-size: 10px;
+                position: absolute;
+                bottom: 5%;
+                right: 3%;
+                background: #111;
+                color: #ffffff;
+                padding: 5px;
+                border-radius: 10px;
+                z-index: 100;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }            
+            .interface label {
+                display: block;
+                font-size: 10px;
+                margin-bottom: 5px;
+                color: inherit;
+             }
             .titles p, .titles label {
                 margin-bottom: 4px;
                 line-height: 1.1;
@@ -111,6 +130,8 @@
         <p>Sorted by country of origin, not of residence.</p>
         <p>Last updated: <span id="data"></span></p>
         <p>Updates automatically every week</p>
+        <p>&nbsp;</p>
+        <p><strong><a href="https://slippi.gg" target="_blank">Play Slippi</a></strong></p>
     </div>
 
     <script>
@@ -132,8 +153,8 @@
         const map = new maplibregl.Map({
             container: 'map',
             style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-            center: [-55, -25],
-            zoom: 3
+            center: [-55, -15],
+            zoom: 2.5
         });
 
         
