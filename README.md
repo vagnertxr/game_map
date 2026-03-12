@@ -1,34 +1,34 @@
 ## Slippi Ranked South America Map 🐸
 
-Este projeto consiste em um mapa interativo dos jogadores de **[Slippi Netplay](https://slippi.gg)** na América do Sul, utilizando dados coletados por meio de técnicas de web scraping e processados em um sistema de banco de dados espaciais.
+This project consists of an interactive map of **[Slippi Netplay](https://slippi.gg)** players in South America, using data collected through web scraping techniques and processed in a spatial database system.
 
-### Funcionamento e Arquitetura
+The interactive map can be viewed at: [vagnertxr.github.io/game_map/](https://vagnertxr.github.io/game_map/).
 
-O projeto é estruturado em um pipeline de dados (ETL) automatizado:
+### Functioning and Architecture
 
-- **Coleta de Dados**: Utiliza Python para realizar scraping em um ranking online de jogadores disponível em [Slippi SA Leaderboard](https://caioicy.github.io/slsa/leaderboards/)
-- **Armazenamento e Processamento**: Os dados coletados são processados e armazenados em um banco de dados **PostgreSQL com PostGIS**
-- **Publicação de Dados Geoespaciais**: Os dados são disponibilizados em formato GeoJSON para consumo pela aplicação utilizando o **GeoServer**
-- **Visualização Interativa**: O mapa é construído com a biblioteca JavaScript **MapLibre GL**, permitindo navegação fluida e exibição dos dados em tempo real 
+The project is structured as an automated data pipeline (ETL):
 
-### Automação
-A rotina de atualização dos dados é executada semanalmente em um servidor local Linux.
+- **Data Collection**: Uses Python to scrape an online player ranking available at [Slippi SA Leaderboard](https://caioicy.github.io/slsa/leaderboards/)
+- **Storage and Processing**: Collected data is processed and stored in a **PostgreSQL + PostGIS** database
+- **Geospatial Data Publishing**: Data is made available in GeoJSON format for application consumption using **GeoServer**
+- **Interactive Visualization**: The map is built with the **MapLibre GL** JavaScript library, allowing fluid navigation and real-time data display
 
-**Fluxo de execução**:
-- Sincronização semanal do repositório via rotina agendada
-- Tratamento e junção dos dados
-- Atualização das tabelas espaciais no banco de dados local e sua disponibilização em camada no GeoServer
-- Exportação dos arquivos GeoJSON atualizados localmente
-- Deploy automático dos novos dados para o GitHub Pages
+### Automation
+The data update routine is executed weekly on a local Linux server.
 
-### Tecnologias Utilizadas
+**Execution flow**:
+- Weekly repository synchronization via scheduled routine
+- Data scraping, processing and merging
+- Update of spatial tables in the local database and its deployment as a layer in GeoServer
+- Export of updated GeoJSON files locally
+- Automatic deploy of new data to GitHub Pages
 
-**Python**: Coleta e processamento de dados
+### Technologies Used
 
-**PostgreSQL + PostGIS**: Banco de dados espacial
+**Python**: Data collection and processing
 
-**GeoServer**: Publicação de dados geoespaciais
+**PostgreSQL + PostGIS**: Spatial database
 
-**MapLibre GL**: Visualização dos dados em mapa interativo
+**GeoServer**: Geospatial data publishing
 
-O mapa interativo pode ser visualizado em: [vagnertxr.github.io/game_map/](https://vagnertxr.github.io/game_map/).
+**MapLibre GL**: Interactive map data visualization
