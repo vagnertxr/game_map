@@ -7,3 +7,4 @@ paises_brutos.csv
 erro.log
 execucao.log
 .env
+data_scraping.py.save
