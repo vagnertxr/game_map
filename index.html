@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Slippi SA Ranked Map</title>
+    <title>Slippi Ranked SA Map</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="assets/favicon-32.png">
 
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  
+
    <style>
        body { font-family: 'Roboto', Arial, sans-serif; margin: 0; padding: 0; }
        html, body, #map { height: 100%; }
@@ -122,7 +122,6 @@
 
     </div>
 
-
     <div class="titles">
         <p><strong>Slippi Ranked South America Map</strong></p>
         <p>Created by <a href="https://github.com/vagnertxr" target="_blank">TXR</a></p>
@@ -135,8 +134,6 @@
     </div>
 
     <script>
-
-
 
     fetch('https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/data.txt')
         .then(response => response.text())
@@ -157,7 +154,6 @@
             zoom: 2.5
         });
 
-        
         const rankIcons = {
             'BRONZE I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B1.svg',
             'BRONZE II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B2.svg',
@@ -177,7 +173,6 @@
             'GRANDMASTER': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/GM.svg',
             'ALL PENDING': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/PN.svg'
         };
-
 
         const loadIcons = async () => {
             const load = async (key, url) => {
@@ -238,7 +233,6 @@
                 type: 'geojson',
                 data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson'
             });
-
             // Fill by average rating
             map.addLayer({
                 id: 'ratings-layer',
@@ -258,7 +252,6 @@
                     'fill-outline-color': '#000000'
                 }
             });
-
             // Fill by player count
             map.addLayer({
                 id: 'polygons-layer',
@@ -277,7 +270,6 @@
                     'fill-outline-color': '#000000'
                 }
             });
-
             // Centroids showing most common rank (icon + label)
             map.addLayer({
                 id: 'centroids-layer',
@@ -297,8 +289,6 @@
                     'text-halo-width': 1
                 }
             });
-
-
             // Popups for polygons and ratings fills
             const showPopup = (e) => {
                 const coordinates = e.lngLat;
