@@ -2,7 +2,7 @@
 # Busca e processa os dados de jogadores do site SLSA Leaderboards
 # extrai códigos de país e códigos Slippi Connect, e popula um banco de dados PostgreSQL + PostGIS
 #
-# por Vagner Teixera
+# por Vagner Teixeira
 # vagnertxr.github.io
 # 2024 
 
