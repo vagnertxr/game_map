@@ -261,7 +261,7 @@ CREATE TABLE output AS
 SELECT
     b.country,
     ROW_NUMBER() OVER () AS id,
-    a.average_rating,
+    CAST(a.average_rating AS DECIMAL (10,2)) as average_rating,
     a.player_count,
     a.most_common_rank,
     b.geom
