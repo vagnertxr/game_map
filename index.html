@@ -108,6 +108,10 @@
 
     <div class="interface">
         <center><p><strong>Layers</strong></p></center>
+        <label>
+            <input type="checkbox" id="toggle-characters" checked>
+            Most Used Character
+        </label>
           <label>  <input type="checkbox" id="toggle-centroids" checked>
             Most Common Rank
         </label>
@@ -174,6 +178,35 @@
             'ALL PENDING': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/PN.svg'
         };
 
+        const characterIcons = {
+            'BOWSER': 'assets/characters/BOWSER.png',
+            'CAPTAIN_FALCON': 'assets/characters/CAPTAIN_FALCON.png',
+            'DONKEY_KONG': 'assets/characters/DONKEY_KONG.png',
+            'DR_MARIO': 'assets/characters/DR_MARIO.png',
+            'FALCO': 'assets/characters/FALCO.png',
+            'FOX': 'assets/characters/FOX.png',
+            'GAME_AND_WATCH': 'assets/characters/GAME_AND_WATCH.png',
+            'GANONDORF': 'assets/characters/GANONDORF.png',
+            'ICE_CLIMBERS': 'assets/characters/ICE_CLIMBERS.png',
+            'JIGGLYPUFF': 'assets/characters/JIGGLYPUFF.png',
+            'KIRBY': 'assets/characters/KIRBY.png',
+            'LINK': 'assets/characters/LINK.png',
+            'LUIGI': 'assets/characters/LUIGI.png',
+            'MARIO': 'assets/characters/MARIO.png',
+            'MARTH': 'assets/characters/MARTH.png',
+            'MEWTWO': 'assets/characters/MEWTWO.png',
+            'NESS': 'assets/characters/NESS.png',
+            'PEACH': 'assets/characters/PEACH.png',
+            'PICHU': 'assets/characters/PICHU.png',
+            'PIKACHU': 'assets/characters/PIKACHU.png',
+            'ROY': 'assets/characters/ROY.png',
+            'SAMUS': 'assets/characters/SAMUS.png',
+            'SHEIK': 'assets/characters/SHEIK.png',
+            'YOSHI': 'assets/characters/YOSHI.png',
+            'YOUNG_LINK': 'assets/characters/YOUNG_LINK.png',
+            'ZELDA': 'assets/characters/ZELDA.png'
+        };
+
         const loadIcons = async () => {
             const load = async (key, url) => {
                 try {
@@ -214,6 +247,9 @@
 
             for (const [rank, url] of Object.entries(rankIcons)) {
                 await load(`icon-${rank}`, url);
+            }
+            for (const [char, url] of Object.entries(characterIcons)) {
+                await load(`char-${char}`, url);
             }
         };
 
@@ -270,6 +306,26 @@
                     'fill-outline-color': '#000000'
                 }
             });
+            // Centroids showing most common character
+            map.addLayer({
+                id: 'characters-layer',
+                type: 'symbol',
+                source: 'centroids',
+                layout: {
+                    'icon-image': ['concat', 'char-', ['get', 'most_used_character']],
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.2, 5, 0.5],
+                    'icon-allow-overlap': true,
+                    'text-field': ['get', 'most_used_character'],
+                    'text-font': ['Open Sans Semibold'],
+                    'text-offset': [0, 1.5],
+                    'text-anchor': 'top',
+                    'visibility': 'visible'
+                },
+                paint: {
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 1
+                }
+            });
             // Centroids showing most common rank (icon + label)
             map.addLayer({
                 id: 'centroids-layer',
@@ -297,7 +353,8 @@
                     <strong>Country:</strong> ${properties.country || 'N/A'}<br>
                     <strong>Player Count:</strong> ${properties.player_count || 'N/A'}<br>
                     <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
-                    <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}
+                    <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}<br>
+                    <strong>Most Used Character:</strong> ${properties.most_used_character || 'N/A'}
                 `;
                 new maplibregl.Popup()
                     .setLngLat(coordinates)
@@ -307,9 +364,10 @@
 
             map.on('click', 'polygons-layer', showPopup);
             map.on('click', 'ratings-layer', showPopup);
+            map.on('click', 'characters-layer', showPopup);
 
             
-            ['centroids-layer', 'polygons-layer', 'ratings-layer'].forEach(id => {
+            ['centroids-layer', 'polygons-layer', 'ratings-layer', 'characters-layer'].forEach(id => {
                 map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
                 map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
             });
@@ -327,6 +385,9 @@
             });
             document.getElementById('toggle-ratings').addEventListener('change', (e) => {
                 toggleLayer('ratings-layer', e.target.checked);
+            });
+            document.getElementById('toggle-characters').addEventListener('change', (e) => {
+                toggleLayer('characters-layer', e.target.checked);
             });
         });
     </script>

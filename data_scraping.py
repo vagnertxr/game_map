@@ -13,11 +13,14 @@ import psycopg2
 import re
 import os
 import requests
+import json
 from dotenv import load_dotenv
 from io import StringIO
 from bs4 import BeautifulSoup
 from datetime import datetime
 print("Bibliotecas importadas com sucesso!")
+
+# ... rest of the imports ...
 
 # direcionando o diretório base
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -42,12 +45,47 @@ tabela = soup.find('table')
 df = pd.read_html(StringIO(str(tabela)), flavor='html5lib')[0]
 
 
+# Extração de dados do JSON embutido
+script_tag = soup.find('script', {'type': 'application/json', 'data-url': '/slsa/data.json'})
+code_map = {}
+slug_map = {}
+
+if script_tag:
+    try:
+        data_json = json.loads(script_tag.string)
+        if isinstance(data_json.get('body'), str):
+            body_data = json.loads(data_json['body'])
+        else:
+            body_data = data_json.get('body', {})
+        
+        code_map = body_data.get('codeMap', {})
+        slug_map = body_data.get('slugMap', {})
+        print(f"JSON extraído: {len(code_map)} jogadores no codeMap, {len(slug_map)} no slugMap")
+    except Exception as e:
+        print(f"Erro ao processar JSON: {e}")
+
+# Mapear connectCode para o personagem mais usado
+char_mapping = {}
+for code, info in code_map.items():
+    try:
+        chars = info.get('account', {}).get('rankedNetplayProfile', {}).get('characters', [])
+        if chars:
+            # encontrar o personagem com maior gameCount
+            most_used = max(chars, key=lambda x: x.get('gameCount', 0))
+            char_mapping[code] = most_used.get('character')
+    except:
+        continue
+
 # tratamento dos dados
 df['RANK'] = df['RANK'].astype(str).str.replace('NEW!', '', regex=False).str.extract(r'(\d+)')
 rating_parts = df['RATING'].str.extract(r'(\d+)\s+(\w+\s*\w*)')
 df['RATING_NUMBER'] = rating_parts[0]
 df['RATING_ELO'] = rating_parts[1]
-df.drop(columns=['CHARACTERS'], inplace=True) #depois será implementado o suporte a dados de personagem
+
+# Extrair código do jogador do nome (ex: "Nome CODE#123")
+df['PLAYER_CODE'] = df['PLAYER'].str.extract(r'([A-Za-z]+#\d+)')
+df['MOST_USED_CHARACTER'] = df['PLAYER_CODE'].map(char_mapping)
+df.drop(columns=['CHARACTERS'], inplace=True)
 
 
 # conexão com o banco (variáveis de ambiente no servidor)
@@ -73,14 +111,15 @@ cursor.execute('''
         PLAYER VARCHAR(255),
         RATING_NUMBER INT,
         RATING_ELO VARCHAR(255),
-        SETS VARCHAR(255)
+        SETS VARCHAR(255),
+        MOST_USED_CHARACTER VARCHAR(255)
     )
 ''')
 
 
 # inserção dos dados
-query_insert_melee = "INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS) VALUES (%s, %s, %s, %s, %s)"
-melee_data = [(row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L']) for _, row in df.iterrows()]
+query_insert_melee = "INSERT INTO melee (RANK, PLAYER, RATING_NUMBER, RATING_ELO, SETS, MOST_USED_CHARACTER) VALUES (%s, %s, %s, %s, %s, %s)"
+melee_data = [(row['RANK'], row['PLAYER'], row['RATING_NUMBER'], row['RATING_ELO'], row['W / L'], row['MOST_USED_CHARACTER']) for _, row in df.iterrows()]
 cursor.executemany(query_insert_melee, melee_data)
 conexao.commit()
 
@@ -170,6 +209,7 @@ os.makedirs('debug', exist_ok=True)
 pd.DataFrame({'codes': slippi_connect_codes}).to_csv(os.path.join('debug', 'codigos_brutos.csv'), index=False)
 pd.DataFrame({'paises': country_codes}).to_csv(os.path.join('debug', 'paises_brutos.csv'), index=False)
 pd.DataFrame({'CountryCode': country_codes, 'SlippiConnectCodes': slippi_connect_codes}).to_csv(os.path.join('debug', 'df_paises_raw.csv'), index=False)
+pd.DataFrame(list(char_mapping.items()), columns=['ConnectCode', 'MostUsedCharacter']).to_csv(os.path.join('debug', 'character_mapping.csv'), index=False)
 df.to_csv(os.path.join('debug', 'melee_table.csv'), index=False)
 
 
@@ -212,7 +252,7 @@ else:
 cursor.execute("DROP TABLE IF EXISTS paises_players")
 cursor.execute('''
 CREATE TABLE paises_players AS
-SELECT slippiconnectcodes, player_name, rating_number, countrycode, rating_elo from melee
+SELECT slippiconnectcodes, player_name, rating_number, countrycode, rating_elo, most_used_character from melee
 INNER JOIN melee_paises ON player_code = slippiconnectcodes
 ''')
 
@@ -238,7 +278,16 @@ SELECT
         GROUP BY pp2.rating_elo
         ORDER BY COUNT(*) DESC
         LIMIT 1
-    ) AS most_common_rank
+    ) AS most_common_rank,
+    (
+        SELECT pp3.most_used_character 
+        FROM paises_players AS pp3
+        WHERE pp3.countrycode = pp1.countrycode
+        AND pp3.most_used_character IS NOT NULL
+        GROUP BY pp3.most_used_character
+        ORDER BY COUNT(*) DESC
+        LIMIT 1
+    ) AS most_used_character
 FROM 
     paises_players AS pp1
 GROUP BY 
@@ -264,6 +313,7 @@ SELECT
     CAST(a.average_rating AS DECIMAL (10,2)) as average_rating,
     a.player_count,
     a.most_common_rank,
+    a.most_used_character,
     b.geom
 FROM public.dados_pais AS a
 JOIN public.countries AS b ON a.countrycode = b.countrycode;
@@ -282,6 +332,7 @@ SELECT
     country,
     id,
     most_common_rank,
+    most_used_character,
     ST_Centroid(geom) AS centroid_geom
 FROM output;''')
 

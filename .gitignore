@@ -8,3 +8,4 @@ erro.log
 execucao.log
 .env
 data_scraping.py.save
+GEMINI.md
