@@ -112,7 +112,7 @@
             <input type="checkbox" id="toggle-characters" checked>
             Most Used Character
         </label>
-          <label>  <input type="checkbox" id="toggle-centroids" checked>
+          <label>  <input type="checkbox" id="toggle-centroids">
             Most Common Rank
         </label>
         <label>
@@ -120,7 +120,7 @@
             Player Count
         </label>
         <label>
-            <input type="checkbox" id="toggle-ratings" checked>
+            <input type="checkbox" id="toggle-ratings">
             Average Rating
         </label>
 
@@ -274,6 +274,9 @@
                 id: 'ratings-layer',
                 type: 'fill',
                 source: 'polygons',
+                layout: {
+                    'visibility': 'none'
+                },
                 paint: {
                     'fill-color': [
                         'interpolate',
@@ -293,6 +296,9 @@
                 id: 'polygons-layer',
                 type: 'fill',
                 source: 'polygons',
+                layout: {
+                    'visibility': 'visible'
+                },
                 paint: {
                     'fill-color': [
                         'interpolate',
@@ -313,9 +319,9 @@
                 source: 'centroids',
                 layout: {
                     'icon-image': ['concat', 'char-', ['get', 'most_used_character']],
-                    'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.2, 5, 0.5],
+                    'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 5, 2.0],
                     'icon-allow-overlap': true,
-                    'text-field': ['get', 'most_used_character'],
+                    'text-field': ['replace', ['get', 'most_used_character'], '_', ' '],
                     'text-font': ['Open Sans Semibold'],
                     'text-offset': [0, 1.5],
                     'text-anchor': 'top',
@@ -338,7 +344,8 @@
                     'text-field': ['get', 'most_common_rank'],
                     'text-font': ['Open Sans Semibold'],
                     'text-offset': [0, 1],
-                    'text-anchor': 'top'
+                    'text-anchor': 'top',
+                    'visibility': 'none'
                 },
                 paint: {
                     'text-halo-color': '#ffffff',
@@ -354,7 +361,7 @@
                     <strong>Player Count:</strong> ${properties.player_count || 'N/A'}<br>
                     <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
                     <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}<br>
-                    <strong>Most Used Character:</strong> ${properties.most_used_character || 'N/A'}
+                    <strong>Most Used Character:</strong> ${(properties.most_used_character || 'N/A').replace(/_/g, ' ')}
                 `;
                 new maplibregl.Popup()
                     .setLngLat(coordinates)
