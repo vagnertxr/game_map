@@ -397,10 +397,9 @@
 
             map.on('click', 'polygons-layer', showPopup);
             map.on('click', 'ratings-layer', showPopup);
-            map.on('click', 'characters-layer', showPopup);
 
             
-            ['centroids-layer', 'polygons-layer', 'ratings-layer', 'characters-layer'].forEach(id => {
+            ['polygons-layer', 'ratings-layer'].forEach(id => {
                 map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
                 map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
             });
