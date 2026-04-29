@@ -145,9 +145,9 @@
             document.getElementById('data').textContent = data;
         })
         .catch(error => {
-            console.error('Erro', error);
+            console.error('Erro ao carregar data', error);
         });
-    
+
     </script>
     <script>
         var svgManager;
@@ -157,6 +157,28 @@
             center: [-55, -15],
             zoom: 2.5
         });
+
+        async function loadCentroidsData() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson');
+                const data = await response.json();
+                if (data.features) {
+                    data.features.forEach(f => {
+                        if (f.properties && f.properties.most_used_character) {
+                            f.properties.most_used_character_formatted = f.properties.most_used_character.replace(/_/g, ' ');
+                        } else if (f.properties) {
+                            f.properties.most_used_character_formatted = '';
+                        }
+                    });
+                }
+                if (map.getSource('centroids')) {
+                    map.getSource('centroids').setData(data);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar centroids', error);
+            }
+        }
+
 
         const rankIcons = {
             'BRONZE I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B1.svg',
@@ -269,6 +291,10 @@
                 type: 'geojson',
                 data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson'
             });
+            
+            // Initial load of processed data
+            loadCentroidsData();
+
             // Fill by average rating
             map.addLayer({
                 id: 'ratings-layer',
@@ -318,10 +344,10 @@
                 type: 'symbol',
                 source: 'centroids',
                 layout: {
-                    'icon-image': ['concat', 'char-', ['get', 'most_used_character']],
+                    'icon-image': ['concat', 'char-', ['coalesce', ['get', 'most_used_character'], '']],
                     'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 5, 2.0],
                     'icon-allow-overlap': true,
-                    'text-field': ['replace', ['get', 'most_used_character'], '_', ' '],
+                    'text-field': ['get', 'most_used_character_formatted'],
                     'text-font': ['Open Sans Semibold'],
                     'text-offset': [0, 1.5],
                     'text-anchor': 'top',
@@ -361,7 +387,7 @@
                     <strong>Player Count:</strong> ${properties.player_count || 'N/A'}<br>
                     <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
                     <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}<br>
-                    <strong>Most Used Character:</strong> ${(properties.most_used_character || 'N/A').replace(/_/g, ' ')}
+                    <strong>Most Used Character:</strong> ${properties.most_used_character_formatted || (properties.most_used_character || 'N/A').replace(/_/g, ' ')}
                 `;
                 new maplibregl.Popup()
                     .setLngLat(coordinates)
