@@ -5,423 +5,554 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="assets/favicon-32.png">
     <link rel="shortcut icon" href="assets/favicon-32.png">
-
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
-   <style>
-       body { font-family: 'Roboto', Arial, sans-serif; margin: 0; padding: 0; }
-       html, body, #map { height: 100%; }
-        .interface {
-            font-family: 'Roboto', Arial, sans-serif;
-            font-size: smaller;
+    <style>
+        :root {
+            --bg: #111;
+            --surface: #111;
+            --surface-hover: rgba(255,255,255,0.06);
+            --border: rgba(255,255,255,0.08);
+            --text: #ffffff;
+            --text-muted: #aaaaaa;
+            --accent: #ffffff;
+            --accent-dim: rgba(255,255,255,0.08);
+            --accent2: #ffffff;
+            --radius: 10px;
+            --sans: 'Roboto', Arial, sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+        }
+
+        html, body, #map { height: 100%; }
+
+        /* ── MAPLIBRE OVERRIDES ─────────────────────────────── */
+        .maplibregl-popup {
+            max-width: 320px;
+        }
+        .maplibregl-popup-content {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+        .maplibregl-popup-tip {
+            border-top-color: var(--border) !important;
+            border-bottom-color: var(--border) !important;
+        }
+        .maplibregl-popup-close-button {
+            color: var(--text-muted);
+            font-size: 18px;
+            padding: 4px 8px;
+        }
+        .maplibregl-popup-close-button:hover { color: var(--text); background: none; }
+
+        /* ── PANEL BASE ─────────────────────────────────────── */
+        .panel {
             position: absolute;
-            bottom: 5%;
-            right: 3%;
-            background: #111;
-            color: #ffffff;
-            padding: 5px;
-            border-radius: 10px;
+            background: var(--surface);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: var(--radius);
             z-index: 100;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            color: var(--text);
+            padding: 16px;
         }
-        .interface label {
-            display: block;
-            font-size: 14px;
-            margin-bottom: 5px;
-            color: inherit;
-        }
+
+        /* ── TITLE PANEL ────────────────────────────────────── */
         .titles {
-            font-family: 'Roboto', Arial, sans-serif;
-            font-size: smaller;
-            position: absolute;
             top: 3%;
             left: 3%;
-            background: #111;
-            color: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            z-index: 1000;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            max-width: 280px;
+            text-align: left;
+        }
+        .titles .map-title {
+            font-family: var(--sans);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0 0 8px;
+            line-height: 1.3;
+        }
+        .titles .map-title span { color: var(--text); }
+        .titles .meta {
+            font-family: var(--sans);
+            font-size: 12px;
+            color: var(--text);
+            margin: 3px 0;
+            line-height: 1.5;
+        }
+        .titles .meta a {
+            color: var(--text);
+            text-decoration: none;
+        }
+        .titles .meta a:hover { text-decoration: underline; }
+        .titles .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 10px 0;
+        }
+        .titles .slippi-link {
+            font-family: var(--sans);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text);
+            text-decoration: none;
+        }
+        .titles .slippi-link:hover { text-decoration: underline; }
+        .titles .slippi-link::before { content: ''; }
+
+        /* ── LAYER PANEL ────────────────────────────────────── */
+        .interface {
+            bottom: 5%;
+            right: 3%;
+            min-width: 200px;
+        }
+        .interface .panel-title {
+            font-family: var(--sans);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0 0 10px;
             text-align: center;
         }
+
+        /* ── LAYER GROUP ────────────────────────────────────── */
+        .layer-group {
+            margin-bottom: 10px;
+        }
+        .layer-group:last-child { margin-bottom: 0; }
+        .group-label {
+            font-family: var(--sans);
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            padding-left: 2px;
+        }
+
+        /* ── TOGGLE BUTTON ROW ──────────────────────────────── */
+        .toggle-row {
+            display: flex;
+            gap: 4px;
+        }
+
+        .layer-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 4px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            background: transparent;
+            color: rgba(255,255,255,0.45);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: var(--sans);
+            font-size: 11px;
+            text-align: center;
+            line-height: 1.2;
+            min-width: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .layer-btn:hover {
+            background: var(--surface-hover);
+            border-color: rgba(255,255,255,0.3);
+            color: var(--text);
+        }
+
+        /* Active state — fill overlay */
+        .layer-btn.active[data-group="fill"] {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+            color: #ffffff;
+        }
+        /* Active state — centroid overlay */
+        .layer-btn.active[data-group="centroid"] {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+            color: #ffffff;
+        }
+
+        /* ── POPUP CONTENT ──────────────────────────────────── */
+        .popup-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin: 3px 0;
+        }
+        .popup-key {
+            font-family: var(--sans);
+            font-size: 10px;
+            color: var(--text-muted);
+            min-width: 110px;
+        }
+        .popup-val {
+            font-family: var(--sans);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .popup-country {
+            font-family: var(--sans);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+
+        /* ── MOBILE ─────────────────────────────────────────── */
         @media (max-width: 600px) {
             .titles {
-                font-size: 10px;
-                padding: 6px;
                 top: 1%;
                 left: 1%;
                 right: 1%;
+                max-width: none;
+                padding: 6px 10px;
                 border-radius: 10px;
-                max-width: calc(100% - 2%);
-            }
-            .interface {
-                font-family: 'Roboto', Arial, sans-serif;
-               font-size: 10px;
-                position: absolute;
-                bottom: 5%;
-                right: 3%;
-                background: #111;
-                color: #ffffff;
-                padding: 5px;
-                border-radius: 10px;
-                z-index: 100;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            }            
-            .interface label {
-                display: block;
                 font-size: 10px;
-                margin-bottom: 5px;
-                color: inherit;
-             }
-            .titles p, .titles label {
-                margin-bottom: 4px;
-                line-height: 1.1;
             }
-            .titles center p strong {
-                display: block;
-                font-size: 12px;
+            .titles .map-title { font-size: 12px; }
+            .titles .meta { font-size: 9px; }
+
+            .interface {
+                bottom: 3%;
+                right: 2%;
+                left: 2%;
+                min-width: unset;
+                padding: 8px 10px;
+                font-size: 10px;
             }
+            .layer-btn { font-size: 9px; padding: 4px 2px; }
         }
-        .titles label {
-            display: block;
-            font-size: 14px;
-            margin-bottom: 2px;
-            color: inherit;
-        }
-        .titles a { color: #ffffff; }
-        .titles p { margin: 4px 0; }
     </style>
 </head>
 <body>
-    <style>
-        .maplibregl-popup {
-            max-width: 480px;
-            font: 10px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
-        }
-    </style>
 
-    <div id="map"></div>
+<div id="map"></div>
 
-    <div class="interface">
-        <center><p><strong>Layers</strong></p></center>
-        <label>
-            <input type="checkbox" id="toggle-characters" checked>
-            Most Used Character
-        </label>
-          <label>  <input type="checkbox" id="toggle-centroids">
-            Most Common Rank
-        </label>
-        <label>
-            <input type="checkbox" id="toggle-polygons" checked>
-            Player Count
-        </label>
-        <label>
-            <input type="checkbox" id="toggle-ratings">
-            Average Rating
-        </label>
+<!-- ── TITLE PANEL ─────────────────────────────────── -->
+<div class="panel titles">
+    <p class="map-title">Slippi Ranked<br><span>South America Map</span></p>
+    <p class="meta">Created by <a href="https://github.com/vagnertxr" target="_blank">TXR</a></p>
+    <p class="meta">Data: <a href="https://caioicy.github.io/slsa/leaderboards/" target="_blank">SLSA Leaderboards</a> by Caioicy 🐸</p>
+    <p class="meta">Sorted by country of origin, not of residence.</p>
+    <hr class="divider">
+    <p class="meta">Last updated: <span id="data">—</span></p>
+    <p class="meta">Updates automatically every week.</p>
+    <hr class="divider">
+    <a href="https://slippi.gg" target="_blank" class="slippi-link">Play Slippi</a>
+</div>
 
+<!-- ── LAYER PANEL ─────────────────────────────────── -->
+<div class="panel interface">
+    <p class="panel-title">Layers</p>
+
+    <!-- Fill layer group: mutually exclusive -->
+    <div class="layer-group">
+        <div class="group-label">Map Fill</div>
+        <div class="toggle-row">
+            <button class="layer-btn active" data-group="fill" data-layer="polygons-layer">Player Count</button>
+            <button class="layer-btn" data-group="fill" data-layer="ratings-layer">Average Rating</button>
+        </div>
     </div>
 
-    <div class="titles">
-        <p><strong>Slippi Ranked South America Map</strong></p>
-        <p>Created by <a href="https://github.com/vagnertxr" target="_blank">TXR</a></p>
-        <p>Data: <a href="https://caioicy.github.io/slsa/leaderboards/" target="_blank">SLSA Leaderboards (by Caioicy)</a> - Huge thanks! 🐸</p>
-        <p>Sorted by country of origin, not of residence.</p>
-        <p>Last updated: <span id="data"></span></p>
-        <p>Updates automatically every week</p>
-        <p>&nbsp;</p>
-        <p><strong><a href="https://slippi.gg" target="_blank">Play Slippi</a></strong></p>
+    <!-- Centroid/overlay group: mutually exclusive -->
+    <div class="layer-group">
+        <div class="group-label">Overlay</div>
+        <div class="toggle-row">
+            <button class="layer-btn active" data-group="centroid" data-layer="characters-layer">Most Used Character</button>
+            <button class="layer-btn" data-group="centroid" data-layer="centroids-layer">Most Common Rank</button>
+        </div>
     </div>
+</div>
 
-    <script>
-
+<script>
+    /* ── Date fetch ─────────────────────────────────────────── */
     fetch('https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/data.txt')
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('data').textContent = data;
-        })
-        .catch(error => {
-            console.error('Erro ao carregar data', error);
-        });
+        .then(r => r.text())
+        .then(d => { document.getElementById('data').textContent = d.trim(); })
+        .catch(e => console.error('Erro ao carregar data', e));
 
-    </script>
-    <script>
-        var svgManager;
-        const map = new maplibregl.Map({
-            container: 'map',
-            style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-            center: [-55, -15],
-            zoom: 2.5
-        });
+    /* ── Map init ───────────────────────────────────────────── */
+    const map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center: [-55, -15],
+        zoom: 2.5
+    });
 
-        async function loadCentroidsData() {
-            try {
-                const response = await fetch('https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson');
-                const data = await response.json();
-                if (data.features) {
-                    data.features.forEach(f => {
-                        if (f.properties && f.properties.most_used_character) {
-                            f.properties.most_used_character_formatted = f.properties.most_used_character.replace(/_/g, ' ');
-                        } else if (f.properties) {
-                            f.properties.most_used_character_formatted = '';
-                        }
-                    });
-                }
-                if (map.getSource('centroids')) {
-                    map.getSource('centroids').setData(data);
-                }
-            } catch (error) {
-                console.error('Erro ao carregar centroids', error);
+    /* ── Centroids with formatted character names ───────────── */
+    async function loadCentroidsData() {
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson');
+            const data = await response.json();
+            if (data.features) {
+                data.features.forEach(f => {
+                    if (f.properties) {
+                        f.properties.most_used_character_formatted =
+                            f.properties.most_used_character
+                                ? f.properties.most_used_character.replace(/_/g, ' ')
+                                : '';
+                    }
+                });
             }
+            if (map.getSource('centroids')) map.getSource('centroids').setData(data);
+        } catch (err) { console.error('Erro ao carregar centroids', err); }
+    }
+
+    /* ── Icon dictionaries ──────────────────────────────────── */
+    const rankIcons = {
+        'BRONZE I':    'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B1.svg',
+        'BRONZE II':   'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B2.svg',
+        'BRONZE III':  'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B3.svg',
+        'SILVER I':    'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S1.svg',
+        'SILVER II':   'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S2.svg',
+        'SILVER III':  'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S3.svg',
+        'GOLD I':      'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G1.svg',
+        'GOLD II':     'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G2.svg',
+        'GOLD III':    'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G3.svg',
+        'PLATINUM I':  'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P1.svg',
+        'PLATINUM II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P2.svg',
+        'PLATINUM III':'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P3.svg',
+        'DIAMOND I':   'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D1.svg',
+        'DIAMOND II':  'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D2.svg',
+        'DIAMOND III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D3.svg',
+        'GRANDMASTER': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/GM.svg',
+        'ALL PENDING': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/PN.svg'
+    };
+
+    const characterIcons = {
+        'BOWSER':        'assets/characters/BOWSER.png',
+        'CAPTAIN_FALCON':'assets/characters/CAPTAIN_FALCON.png',
+        'DONKEY_KONG':   'assets/characters/DONKEY_KONG.png',
+        'DR_MARIO':      'assets/characters/DR_MARIO.png',
+        'FALCO':         'assets/characters/FALCO.png',
+        'FOX':           'assets/characters/FOX.png',
+        'GAME_AND_WATCH':'assets/characters/GAME_AND_WATCH.png',
+        'GANONDORF':     'assets/characters/GANONDORF.png',
+        'ICE_CLIMBERS':  'assets/characters/ICE_CLIMBERS.png',
+        'JIGGLYPUFF':    'assets/characters/JIGGLYPUFF.png',
+        'KIRBY':         'assets/characters/KIRBY.png',
+        'LINK':          'assets/characters/LINK.png',
+        'LUIGI':         'assets/characters/LUIGI.png',
+        'MARIO':         'assets/characters/MARIO.png',
+        'MARTH':         'assets/characters/MARTH.png',
+        'MEWTWO':        'assets/characters/MEWTWO.png',
+        'NESS':          'assets/characters/NESS.png',
+        'PEACH':         'assets/characters/PEACH.png',
+        'PICHU':         'assets/characters/PICHU.png',
+        'PIKACHU':       'assets/characters/PIKACHU.png',
+        'ROY':           'assets/characters/ROY.png',
+        'SAMUS':         'assets/characters/SAMUS.png',
+        'SHEIK':         'assets/characters/SHEIK.png',
+        'YOSHI':         'assets/characters/YOSHI.png',
+        'YOUNG_LINK':    'assets/characters/YOUNG_LINK.png',
+        'ZELDA':         'assets/characters/ZELDA.png'
+    };
+
+    /* ── Icon loader ────────────────────────────────────────── */
+    const loadIcons = async () => {
+        const load = async (key, url) => {
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) { console.error('Erro HTTP ícone', key, resp.status); return; }
+                const blob = await resp.blob();
+                try {
+                    const bitmap = await createImageBitmap(blob);
+                    if (map.hasImage(key)) { try { map.removeImage(key); } catch (_) {} }
+                    map.addImage(key, bitmap);
+                } catch (_) {
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            if (map.hasImage(key)) { try { map.removeImage(key); } catch (_) {} }
+                            map.addImage(key, img);
+                        } catch (e) { console.error('Erro addImage fallback', key, e); }
+                    };
+                    img.onerror = e => console.error('Erro img fallback', key, e);
+                    img.src = URL.createObjectURL(blob);
+                }
+            } catch (err) { console.error('Erro loadIcon', key, err); }
+        };
+        for (const [rank, url] of Object.entries(rankIcons)) await load(`icon-${rank}`, url);
+        for (const [ch,   url] of Object.entries(characterIcons)) await load(`char-${ch}`, url);
+    };
+
+    /* ── Map load ───────────────────────────────────────────── */
+    map.on('load', async () => {
+        await loadIcons();
+
+        map.addSource('polygons', {
+            type: 'geojson',
+            data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/polygons.geojson'
+        });
+        map.addSource('centroids', {
+            type: 'geojson',
+            data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson'
+        });
+
+        loadCentroidsData();
+
+        /* Fill — average rating */
+        map.addLayer({
+            id: 'ratings-layer',
+            type: 'fill',
+            source: 'polygons',
+            layout: { 'visibility': 'none' },
+            paint: {
+                'fill-color': [
+                    'interpolate', ['linear'], ['get', 'average_rating'],
+                    800,  '#fffdbd',
+                    1200, '#fff952',
+                    1500, '#ffbf00',
+                    1750, '#ff9f00',
+                    2000, '#cc8400'
+                ],
+                'fill-outline-color': '#000000'
+            }
+        });
+
+        /* Fill — player count */
+        map.addLayer({
+            id: 'polygons-layer',
+            type: 'fill',
+            source: 'polygons',
+            layout: { 'visibility': 'visible' },
+            paint: {
+                'fill-color': [
+                    'interpolate', ['linear'], ['get', 'player_count'],
+                    1,  '#e1ffd1',
+                    5,  '#63c92c',
+                    10, '#1f4a07',
+                    40, '#0e2900'
+                ],
+                'fill-outline-color': '#000000'
+            }
+        });
+
+        /* Centroid — most used character */
+        map.addLayer({
+            id: 'characters-layer',
+            type: 'symbol',
+            source: 'centroids',
+            layout: {
+                'icon-image': ['concat', 'char-', ['coalesce', ['get', 'most_used_character'], '']],
+                'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 5, 2.0],
+                'icon-allow-overlap': true,
+                'text-field': ['get', 'most_used_character_formatted'],
+                'text-font': ['Open Sans Semibold'],
+                'text-offset': [0, 1.5],
+                'text-anchor': 'top',
+                'visibility': 'visible'
+            },
+            paint: {
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 1
+            }
+        });
+
+        /* Centroid — most common rank */
+        map.addLayer({
+            id: 'centroids-layer',
+            type: 'symbol',
+            source: 'centroids',
+            layout: {
+                'icon-image': ['concat', 'icon-', ['get', 'most_common_rank']],
+                'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.045, 5, 0.1125],
+                'icon-allow-overlap': true,
+                'text-field': ['get', 'most_common_rank'],
+                'text-font': ['Open Sans Semibold'],
+                'text-offset': [0, 1],
+                'text-anchor': 'top',
+                'visibility': 'none'
+            },
+            paint: {
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 1
+            }
+        });
+
+        /* ── Popups ─────────────────────────────────────────── */
+        const showPopup = (e) => {
+            const p = e.features[0].properties;
+            const charFormatted = p.most_used_character_formatted
+                || (p.most_used_character || 'N/A').replace(/_/g, ' ');
+            const html = `
+                <div class="popup-country">${p.country || 'N/A'}</div>
+                <div class="popup-row">
+                    <span class="popup-key">Player Count</span>
+                    <span class="popup-val">${p.player_count || 'N/A'}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-key">Avg Rating</span>
+                    <span class="popup-val">${p.average_rating || 'N/A'}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-key">Common Rank</span>
+                    <span class="popup-val">${p.most_common_rank || 'N/A'}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-key">Top Character</span>
+                    <span class="popup-val">${charFormatted}</span>
+                </div>`;
+            new maplibregl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(html)
+                .addTo(map);
+        };
+
+        map.on('click', 'polygons-layer', showPopup);
+        map.on('click', 'ratings-layer',  showPopup);
+        ['polygons-layer', 'ratings-layer'].forEach(id => {
+            map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
+            map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
+        });
+
+        /* ── Layer toggle logic ─────────────────────────────── */
+        const FILL_LAYERS     = ['polygons-layer', 'ratings-layer'];
+        const CENTROID_LAYERS = ['characters-layer', 'centroids-layer'];
+
+        function setGroupLayer(groupLayers, targetLayer) {
+            groupLayers.forEach(id => {
+                if (!map.getLayer(id)) return;
+                map.setLayoutProperty(id, 'visibility', id === targetLayer ? 'visible' : 'none');
+            });
         }
 
+        document.querySelectorAll('.layer-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const group     = btn.dataset.group;
+                const targetId  = btn.dataset.layer;
+                const groupLayers = group === 'fill' ? FILL_LAYERS : CENTROID_LAYERS;
 
-        const rankIcons = {
-            'BRONZE I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B1.svg',
-            'BRONZE II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B2.svg',
-            'BRONZE III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/B3.svg',
-            'SILVER I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S1.svg',
-            'SILVER II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S2.svg',
-            'SILVER III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/S3.svg',
-            'GOLD I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G1.svg',
-            'GOLD II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G2.svg',
-            'GOLD III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/G3.svg',
-            'DIAMOND I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D1.svg',
-            'DIAMOND II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D2.svg',
-            'DIAMOND III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/D3.svg',
-            'PLATINUM I': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P1.svg',
-            'PLATINUM II': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P2.svg',
-            'PLATINUM III': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/P3.svg',
-            'GRANDMASTER': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/GM.svg',
-            'ALL PENDING': 'https://raw.githubusercontent.com/vagnertxr/game_map/a6d457109fe57d6fc66a72a3b55e743181499a50/assets/PN.svg'
-        };
+                // Update map layers
+                setGroupLayer(groupLayers, targetId === 'none' ? '__none__' : targetId);
 
-        const characterIcons = {
-            'BOWSER': 'assets/characters/BOWSER.png',
-            'CAPTAIN_FALCON': 'assets/characters/CAPTAIN_FALCON.png',
-            'DONKEY_KONG': 'assets/characters/DONKEY_KONG.png',
-            'DR_MARIO': 'assets/characters/DR_MARIO.png',
-            'FALCO': 'assets/characters/FALCO.png',
-            'FOX': 'assets/characters/FOX.png',
-            'GAME_AND_WATCH': 'assets/characters/GAME_AND_WATCH.png',
-            'GANONDORF': 'assets/characters/GANONDORF.png',
-            'ICE_CLIMBERS': 'assets/characters/ICE_CLIMBERS.png',
-            'JIGGLYPUFF': 'assets/characters/JIGGLYPUFF.png',
-            'KIRBY': 'assets/characters/KIRBY.png',
-            'LINK': 'assets/characters/LINK.png',
-            'LUIGI': 'assets/characters/LUIGI.png',
-            'MARIO': 'assets/characters/MARIO.png',
-            'MARTH': 'assets/characters/MARTH.png',
-            'MEWTWO': 'assets/characters/MEWTWO.png',
-            'NESS': 'assets/characters/NESS.png',
-            'PEACH': 'assets/characters/PEACH.png',
-            'PICHU': 'assets/characters/PICHU.png',
-            'PIKACHU': 'assets/characters/PIKACHU.png',
-            'ROY': 'assets/characters/ROY.png',
-            'SAMUS': 'assets/characters/SAMUS.png',
-            'SHEIK': 'assets/characters/SHEIK.png',
-            'YOSHI': 'assets/characters/YOSHI.png',
-            'YOUNG_LINK': 'assets/characters/YOUNG_LINK.png',
-            'ZELDA': 'assets/characters/ZELDA.png'
-        };
-
-        const loadIcons = async () => {
-            const load = async (key, url) => {
-                try {
-                    const resp = await fetch(url);
-                    if (!resp.ok) {
-                        console.error('Erro HTTP ao buscar ícone', key, url, resp.status);
-                        return;
-                    }
-                    const blob = await resp.blob();
-
-                    
-                    try {
-                        const bitmap = await createImageBitmap(blob);
-                        if (map.hasImage && map.hasImage(key)) {
-                            try { map.removeImage(key); } catch (_) {}
-                        }
-                        map.addImage(key, bitmap);
-                        return;
-                    } catch (createErr) {
-                        
-                        const img = new Image();
-                        img.onload = () => {
-                            try {
-                                if (map.hasImage && map.hasImage(key)) {
-                                    try { map.removeImage(key); } catch (_) {}
-                                }
-                                map.addImage(key, img);
-                            } catch (e) { console.error('Erro ao adicionar imagem (fallback)', key, e); }
-                        };
-                        img.onerror = (e) => { console.error('Erro ao carregar imagem fallback', key, url, e); };
-                        img.src = URL.createObjectURL(blob);
-                        return;
-                    }
-                } catch (err) {
-                    console.error('Erro ao carregar ícone', key, url, err);
-                }
-            };
-
-            for (const [rank, url] of Object.entries(rankIcons)) {
-                await load(`icon-${rank}`, url);
-            }
-            for (const [char, url] of Object.entries(characterIcons)) {
-                await load(`char-${char}`, url);
-            }
-        };
-
-        map.on('load', async () => {
-            
-            if (maplibregl.SvgManager) {
-                try { svgManager = new maplibregl.SvgManager(map); } catch (e) { /* ignore */ }
-            }
-            await loadIcons();
-
-            map.addSource('polygons', {
-                type: 'geojson',
-                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/polygons.geojson'
-            });
-
-            map.addSource('centroids', {
-                type: 'geojson',
-                data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/centroids.geojson'
-            });
-            
-            // Initial load of processed data
-            loadCentroidsData();
-
-            // Fill by average rating
-            map.addLayer({
-                id: 'ratings-layer',
-                type: 'fill',
-                source: 'polygons',
-                layout: {
-                    'visibility': 'none'
-                },
-                paint: {
-                    'fill-color': [
-                        'interpolate',
-                        ['linear'],
-                        ['get', 'average_rating'],
-                        800, '#fffdbd',
-                        1200, '#fff952',
-                        1500, '#ffbf00',
-                        1750, '#ff9f00',
-                        2000, '#cc8400'
-                    ],
-                    'fill-outline-color': '#000000'
-                }
-            });
-            // Fill by player count
-            map.addLayer({
-                id: 'polygons-layer',
-                type: 'fill',
-                source: 'polygons',
-                layout: {
-                    'visibility': 'visible'
-                },
-                paint: {
-                    'fill-color': [
-                        'interpolate',
-                        ['linear'],
-                        ['get', 'player_count'],
-                        1, '#e1ffd1',
-                        5, '#63c92c',
-                        10, '#1f4a07',
-                        40, '#0e2900'
-                    ],
-                    'fill-outline-color': '#000000'
-                }
-            });
-            // Centroids showing most common character
-            map.addLayer({
-                id: 'characters-layer',
-                type: 'symbol',
-                source: 'centroids',
-                layout: {
-                    'icon-image': ['concat', 'char-', ['coalesce', ['get', 'most_used_character'], '']],
-                    'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 5, 2.0],
-                    'icon-allow-overlap': true,
-                    'text-field': ['get', 'most_used_character_formatted'],
-                    'text-font': ['Open Sans Semibold'],
-                    'text-offset': [0, 1.5],
-                    'text-anchor': 'top',
-                    'visibility': 'visible'
-                },
-                paint: {
-                    'text-halo-color': '#ffffff',
-                    'text-halo-width': 1
-                }
-            });
-            // Centroids showing most common rank (icon + label)
-            map.addLayer({
-                id: 'centroids-layer',
-                type: 'symbol',
-                source: 'centroids',
-                layout: {
-                    'icon-image': ['concat', 'icon-', ['get', 'most_common_rank']],
-                    'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.045, 5, 0.1125],
-                    'icon-allow-overlap': true,
-                    'text-field': ['get', 'most_common_rank'],
-                    'text-font': ['Open Sans Semibold'],
-                    'text-offset': [0, 1],
-                    'text-anchor': 'top',
-                    'visibility': 'none'
-                },
-                paint: {
-                    'text-halo-color': '#ffffff',
-                    'text-halo-width': 1
-                }
-            });
-            // Popups for polygons and ratings fills
-            const showPopup = (e) => {
-                const coordinates = e.lngLat;
-                const properties = e.features[0].properties;
-                const popupContent = `
-                    <strong>Country:</strong> ${properties.country || 'N/A'}<br>
-                    <strong>Player Count:</strong> ${properties.player_count || 'N/A'}<br>
-                    <strong>Average Rating:</strong> ${properties.average_rating || 'N/A'}<br>
-                    <strong>Most Common Rank:</strong> ${properties.most_common_rank || 'N/A'}<br>
-                    <strong>Most Used Character:</strong> ${properties.most_used_character_formatted || (properties.most_used_character || 'N/A').replace(/_/g, ' ')}
-                `;
-                new maplibregl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML(popupContent)
-                    .addTo(map);
-            };
-
-            map.on('click', 'polygons-layer', showPopup);
-            map.on('click', 'ratings-layer', showPopup);
-
-            
-            ['polygons-layer', 'ratings-layer'].forEach(id => {
-                map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
-                map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
-            });
-
-            function toggleLayer(layerId, isChecked) {
-                if (!map.getLayer(layerId)) return;
-                map.setLayoutProperty(layerId, 'visibility', isChecked ? 'visible' : 'none');
-            }
-
-            document.getElementById('toggle-polygons').addEventListener('change', (e) => {
-                toggleLayer('polygons-layer', e.target.checked);
-            });
-            document.getElementById('toggle-centroids').addEventListener('change', (e) => {
-                toggleLayer('centroids-layer', e.target.checked);
-            });
-            document.getElementById('toggle-ratings').addEventListener('change', (e) => {
-                toggleLayer('ratings-layer', e.target.checked);
-            });
-            document.getElementById('toggle-characters').addEventListener('change', (e) => {
-                toggleLayer('characters-layer', e.target.checked);
+                // Update button states
+                document.querySelectorAll(`.layer-btn[data-group="${group}"]`).forEach(b => {
+                    b.classList.toggle('active', b === btn);
+                });
             });
         });
-    </script>
+    });
+</script>
 </body>
 </html>
