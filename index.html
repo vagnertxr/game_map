@@ -21,6 +21,8 @@
             --accent: #ffffff;
             --accent-dim: rgba(255,255,255,0.08);
             --accent2: #ffffff;
+            --link: #8bd3ff;
+            --link-hover: #c8ecff;
             --radius: 10px;
             --sans: 'Roboto', Arial, sans-serif;
         }
@@ -97,10 +99,19 @@
             line-height: 1.5;
         }
         .titles .meta a {
-            color: var(--text);
-            text-decoration: none;
+            color: var(--link);
+            font-weight: 700;
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 2px;
         }
-        .titles .meta a:hover { text-decoration: underline; }
+        .titles .meta a:hover { color: var(--link-hover); }
+        .titles .meta a:focus-visible,
+        .titles .slippi-link:focus-visible {
+            outline: 2px solid var(--link);
+            outline-offset: 3px;
+            border-radius: 3px;
+        }
         .titles .divider {
             border: none;
             border-top: 1px solid var(--border);
@@ -110,10 +121,12 @@
             font-family: var(--sans);
             font-size: 12px;
             font-weight: 700;
-            color: var(--text);
-            text-decoration: none;
+            color: var(--link);
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 2px;
         }
-        .titles .slippi-link:hover { text-decoration: underline; }
+        .titles .slippi-link:hover { color: var(--link-hover); }
         .titles .slippi-link::before { content: ''; }
 
         /* ── LAYER PANEL ────────────────────────────────────── */
@@ -402,7 +415,8 @@
 
         map.addSource('polygons', {
             type: 'geojson',
-            data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/polygons.geojson'
+            data: 'https://raw.githubusercontent.com/vagnertxr/game_map/main/docs/polygons.simplified.geojson',
+            tolerance: 1.0
         });
         map.addSource('centroids', {
             type: 'geojson',

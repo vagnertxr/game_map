@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from io import StringIO
 from bs4 import BeautifulSoup
 from datetime import datetime
+from simplify_geojson import simplify_geojson
 print("Bibliotecas importadas com sucesso!")
 
 # ... rest of the imports ...
@@ -355,6 +356,7 @@ os.makedirs(output_dir, exist_ok=True)
 # os.path.join é usado para garantir compatibilidade entre sistemas operacionais (Windows, Linux, etc.) ao construir os caminhos dos arquivos
 file_centroids = os.path.join(output_dir, "centroids.geojson")
 file_polygons = os.path.join(output_dir, "polygons.geojson")
+file_polygons_simplified = os.path.join(output_dir, "polygons.simplified.geojson")
 file_data = os.path.join(output_dir, "data.txt")
 
 
@@ -375,6 +377,19 @@ def download_geojson(url, filename):
 # a rotina faz upload desses geojson para a pasta do site.
 download_geojson(url_centroids, file_centroids)
 download_geojson(url_polygons, file_polygons)
+
+
+# gera uma versão menor para o mapa web. O GeoJSON completo continua salvo para
+# auditoria/reprocessamento, mas o site carrega o arquivo simplificado.
+simplify_tolerance = float(os.environ.get("GEOJSON_SIMPLIFY_TOLERANCE", "0.03"))
+simplify_precision = int(os.environ.get("GEOJSON_SIMPLIFY_PRECISION", "5"))
+simplify_geojson(
+    file_polygons,
+    file_polygons_simplified,
+    tolerance=simplify_tolerance,
+    precision=simplify_precision,
+)
+print(f"Arquivo simplificado salvo: {file_polygons_simplified}")
 
 
 # salva a data da última atualização em um arquivo de texto, que pode ser lido pelo site para exibir a data da última atualização dos dados
