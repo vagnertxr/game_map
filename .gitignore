@@ -10,3 +10,4 @@ execucao.log
 data_scraping.py.save
 GEMINI.md
 start_server.sh
+/__pycache__
