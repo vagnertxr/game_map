@@ -202,6 +202,38 @@
             color: #ffffff;
         }
 
+        /* ── RANKED STATUS PANEL ────────────────────────────── */
+        .ranked-status {
+            top: 3%;
+            right: 3%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+        }
+        .ranked-badge { display: block; }
+        .ranked-label {
+            font-family: var(--sans);
+            font-size: 10px;
+            color: var(--text-muted);
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+        .ranked-state {
+            font-family: var(--sans);
+            font-size: 14px;
+            font-weight: 700;
+            margin: 2px 0;
+        }
+        .ranked-state.active { color: #63c92c; }
+        .ranked-state.inactive { color: var(--text-muted); }
+        .ranked-countdown {
+            font-family: var(--sans);
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
         /* ── POPUP CONTENT ──────────────────────────────────── */
         .popup-row {
             display: flex;
@@ -254,6 +286,18 @@
                 font-size: 10px;
             }
             .layer-btn { font-size: 9px; padding: 4px 2px; }
+
+            .ranked-status {
+                top: 50%;
+                right: 2%;
+                transform: translateY(-50%);
+                padding: 6px 10px;
+                gap: 6px;
+            }
+            .ranked-badge { width: 24px; }
+            .ranked-label { font-size: 8px; }
+            .ranked-state { font-size: 11px; }
+            .ranked-countdown { font-size: 9px; }
         }
     </style>
 </head>
@@ -272,6 +316,16 @@
     <p class="meta">Updates automatically every week.</p>
     <hr class="divider">
     <a href="https://slippi.gg" target="_blank" class="slippi-link">Play Slippi</a>
+</div>
+
+<!-- ── RANKED STATUS PANEL ─────────────────────────── -->
+<div class="panel ranked-status">
+    <img id="ranked-badge" class="ranked-badge" src="assets/ranked_inactive.svg" alt="Ranked status badge" width="36">
+    <div class="ranked-text">
+        <p class="ranked-label">RANKED</p>
+        <p class="ranked-state" id="ranked-state">—</p>
+        <p class="ranked-countdown" id="ranked-countdown">—</p>
+    </div>
 </div>
 
 <!-- ── LAYER PANEL ─────────────────────────────────── -->
@@ -303,6 +357,45 @@
         .then(r => r.text())
         .then(d => { document.getElementById('data').textContent = d.trim(); })
         .catch(e => console.error('Erro ao carregar data', e));
+
+    /* ── Ranked status indicator ──────────────────────────────
+       Ranked is free/active for 24h every 4 days, starting at 8:00 UTC,
+       anchored to 2024-04-15T08:00:00Z. ── */
+    const RANKED_ANCHOR_MS = Date.UTC(2024, 3, 15, 8, 0, 0);
+    const RANKED_CYCLE_MS  = 4 * 24 * 60 * 60 * 1000;
+    const RANKED_ACTIVE_MS = 24 * 60 * 60 * 1000;
+
+    function getRankedStatus(now = Date.now()) {
+        let phase = (now - RANKED_ANCHOR_MS) % RANKED_CYCLE_MS;
+        if (phase < 0) phase += RANKED_CYCLE_MS;
+        const active = phase < RANKED_ACTIVE_MS;
+        const msRemaining = active ? (RANKED_ACTIVE_MS - phase) : (RANKED_CYCLE_MS - phase);
+        return { active, msRemaining };
+    }
+
+    function formatDuration(ms) {
+        const totalMin = Math.floor(ms / 60000);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        return `${h}h ${m}m`;
+    }
+
+    function updateRankedIndicator() {
+        const { active, msRemaining } = getRankedStatus();
+        const badge = document.getElementById('ranked-badge');
+        const state = document.getElementById('ranked-state');
+        const countdown = document.getElementById('ranked-countdown');
+        badge.src = active ? 'assets/ranked_active.svg' : 'assets/ranked_inactive.svg';
+        state.textContent = active ? 'ACTIVE' : 'INACTIVE';
+        state.classList.toggle('active', active);
+        state.classList.toggle('inactive', !active);
+        countdown.textContent = active
+            ? `ends in ${formatDuration(msRemaining)}`
+            : `starts in ${formatDuration(msRemaining)}`;
+    }
+
+    updateRankedIndicator();
+    setInterval(updateRankedIndicator, 60000);
 
     /* ── Map init ───────────────────────────────────────────── */
     const map = new maplibregl.Map({
